@@ -1,0 +1,37 @@
+{# templates/calendar/_nav.html #}
+<ul class="nav nav-pills mb-3">
+  {% for v,name in view_modes %}
+    <li class="nav-item">
+      <a class="nav-link {% if view == v %}active{% endif %}"
+         href="?view={{ v }}
+                &{% if v == 'day'   %}year={{ date.year }}&month={{ date.month }}&day={{ date.day }}{%
+                   elif v == 'week'  %}year={{ date.year }}&week={{ date.isocalendar.1 }}{%
+                   else              %}year={{ date.year }}&month={{ date.month }}{% endif %}
+                &type={{ filter_type|default:'all' }}">
+        {{ name }}
+      </a>
+    </li>
+  {% endfor %}
+</ul>
+
+<form class="d-inline-block ms-3" method="get">
+  <input type="hidden" name="view"  value="{{ view }}">
+  <input type="hidden" name="year"  value="{{ date.year }}">
+  {% if view == 'day' %}
+    <input type="hidden" name="month" value="{{ date.month }}">
+    <input type="hidden" name="day"   value="{{ date.day }}">
+  {% elif view == 'week' %}
+    <input type="hidden" name="week"  value="{{ date.isocalendar.1 }}">
+  {% else %}
+    <input type="hidden" name="month" value="{{ date.month }}">
+  {% endif %}
+  <label for="typeSelect" class="form-label me-2">Zeige:</label>
+  <select id="typeSelect" name="type"
+          class="form-select form-select-sm d-inline-block w-auto"
+          onchange="this.form.submit()">
+    <option value="all"  {% if filter_type == 'all'  %}selected{% endif %}>Alle</option>
+    <option value="appt" {% if filter_type == 'appt' %}selected{% endif %}>Termine</option>
+    <option value="todo" {% if filter_type == 'todo' %}selected{% endif %}>To-Dos</option>
+  </select>
+</form>
+<hr>

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Alle Chat-Threads</h1>
+<a href="{% url 'thread_create' %}" class="btn btn-primary">Neuen Thread anlegen</a>
+<ul class="list-group mt-3">
+  {% for t in threads %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <a href="{% url 'thread_detail' t.pk %}">{{ t.title }}</a>
+      <small class="text-muted">{{ t.updated_at|date:"d.m.Y H:i" }}</small>
+    </li>
+  {% empty %}
+    <li class="list-group-item">Noch keine Threads vorhanden.</li>
+  {% endfor %}
+</ul>
+{% if is_paginated %}
+  <nav aria-label="Page navigation">
+    {% bootstrap_pagination threads %}
+  </nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load tz static %}
+
+{% block extra_head %}
+  <link href="{% static 'css/base_style.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2>To-Do: {{ todo.title }}</h2>
+  <p><strong>Beschreibung:</strong> {{ todo.description }}</p>
+  <p><strong>Deadline:</strong> {{ todo.deadline|date:"d.m.Y H:i" }}</p>
+  <p><strong>Priorität:</strong> {{ todo.get_priority_display }}</p>
+  <p><strong>Abhängigkeiten:</strong>
+    {% for dep in todo.dependencies.all %}
+      {{ dep.title }}{% if not forloop.last %}, {% endif %}
+    {% empty %}
+      keine
+    {% endfor %}
+  </p>
+  <p><strong>Wiederholung:</strong> {{ todo.frequency }} alle {{ todo.interval }}{% if todo.by_weekday %} ({{ todo.by_weekday }}){% endif %}{% if todo.end_date %} bis {{ todo.end_date }}{% endif %}</p>
+  <h4>Nächste Vorkommen:</h4>
+  <ul>
+    {% for occ in todo.get_occurrences|slice:":5" %}
+      <li>{{ occ|date:"d.m.Y H:i" }}</li>
+    {% empty %}
+      <li>keine Wiederholung</li>
+    {% endfor %}
+  </ul>
+  <a href="{% url 'calendar:todo_add' %}" class="btn btn-outline-primary">Neues To-Do</a>
+</div>
+{% endblock %}

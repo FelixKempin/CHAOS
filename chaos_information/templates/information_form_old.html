@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% load static widget_tweaks %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/base_style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">
+    {% if form.instance.pk %}Information bearbeiten{% else %}Neue Information{% endif %}
+  </h1>
+
+  <form method="post" id="info-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="row g-3">
+      {# Titel #}
+      <div class="col-md-6">
+        {{ form.title.label_tag }}
+        {% render_field form.title class="form-control" %}
+        {{ form.title.errors }}
+      </div>
+
+      {# Status #}
+      <div class="col-md-3">
+        {{ form.status.label_tag }}
+        {% render_field form.status class="form-select" %}
+        {{ form.status.errors }}
+      </div>
+
+      {# Draft Checkbox #}
+      <div class="col-md-3 d-flex align-items-end">
+        <div class="form-check">
+          {% render_field form.draft class="form-check-input" %}
+          {{ form.draft.label_tag }}
+        </div>
+      </div>
+
+      {# Tag-Autocomplete #}
+      <div class="col-12">
+        <label class="form-label">Tags auswählen</label>
+        <div class="mb-2 position-relative">
+          <input type="text"
+                 id="tag-search"
+                 class="form-control"
+                 placeholder="Tag suchen…">
+          <ul id="tag-suggestions"
+              class="list-group position-absolute w-100"
+              style="z-index:1000; max-height:200px; overflow:auto; display:none;">
+          </ul>
+        </div>
+        <div id="selected-tags" class="d-flex flex-wrap gap-1">
+          {% for tag in selected_tags %}
+            <span class="badge bg-primary position-relative lh-sm me-1 mb-1" data-pk="{{ tag.pk }}">
+              {{ tag.name }}
+              <button type="button"
+                      class="btn-close btn-close-white btn-sm"
+                      onclick="removeTag({{ tag.pk }})"
+                      style="position:absolute;top:0;right:0;transform:translate(50%,-50%);">
+                <span class="visually-hidden">Entfernen</span>
+              </button>
+              <input type="hidden" name="tags" value="{{ tag.pk }}">
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Kurzinformation #}
+      <div class="col-12">
+        {{ form.information_short.label_tag }}
+        {% render_field form.information_short class="form-control" %}
+      </div>
+
+      {# Lange Information #}
+      <div class="col-12">
+        {{ form.information_long.label_tag }}
+        {% render_field form.information_long class="form-control" %}
+      </div>
+
+      {# Originaltext #}
+      <div class="col-12">
+        {{ form.information_original.label_tag }}
+        {% render_field form.information_original class="form-control" %}
+      </div>
+
+      {# Ordner-Auswahl #}
+      <div class="col-md-6">
+        {{ form.folder.label_tag }}
+        {% render_field form.folder class="form-select" %}
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <button type="submit" class="btn btn-primary">Speichern</button>
+      <a href="{% url 'information_list' %}" class="btn btn-secondary ms-2">Abbrechen</a>
+    </div>
+  </form>
+  {% if form.instance.pk and form.instance.content_object %}
+<hr class="my-5">
+
+<h3>Verknüpftes Objekt</h3>
+
+{% with obj=form.instance.content_object model=form.instance.object_type_string %}
+  {% if model == "pdf_document" %}
+    <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">PDF öffnen</a></p>
+    <iframe src="{{ obj.file.url }}" width="100%" height="600px" style="border:1px solid #ccc;"></iframe>
+
+  {% elif model == "img_document" %}
+    <p><strong>Bild:</strong></p>
+    <img src="{{ obj.file.url }}" alt="Bild" class="img-fluid border" style="max-height:500px;">
+
+  {% elif model == "text_document" or model == "markdown_document" or model == "csv_document" %}
+    <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
+    <pre class="bg-light p-3 border">{{ obj.file.read|default:"(Inhalt kann nicht angezeigt werden)" }}</pre>
+
+  {% elif model == "audio_document" %}
+    <p><strong>Audio:</strong></p>
+    <audio controls src="{{ obj.file.url }}">Dein Browser unterstützt kein Audio-Tag.</audio>
+
+  {% elif model == "message" %}
+    <p><strong>Nachricht:</strong></p>
+    <div class="border p-3 bg-light">
+      {{ obj.text|linebreaks }}
+    </div>
+
+  {% else %}
+    <p><em>Verknüpftes Objekt vom Typ "{{ model }}"</em></p>
+    <pre class="bg-light p-3 border">{{ obj }}</pre>
+  {% endif %}
+{% endwith %}
+{% endif %}
+{% if related_infos %}
+  <hr class="my-5">
+  <h3>Ähnliche Informationen</h3>
+  <ul class="list-group">
+    {% for rel in related_infos %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <a href="{% url 'information_edit' rel.info.pk %}">
+            {{ rel.info.title }}
+          </a>
+          <small class="text-muted">({{ rel.info.datetime|date:"Y-m-d H:i" }})</small>
+        </div>
+        <span class="badge bg-secondary">
+          {{ rel.distance|floatformat:2 }}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Prepare Tag-Autocomplete data
+  const allTags = [{% for t in all_tags %}{ pk: {{ t.pk }}, name: '{{ t.name|escapejs }}' }{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const searchInput = document.getElementById('tag-search');
+  const suggestions = document.getElementById('tag-suggestions');
+  let selectedIndex = -1;
+
+  // Show suggestions on input
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    suggestions.innerHTML = '';
+    if (!q) {
+      suggestions.style.display = 'none';
+      return;
+    }
+    const filtered = allTags
+      .filter(t => t.name.toLowerCase().includes(q))
+      .filter(t => !document.querySelector(`#selected-tags span[data-pk="${t.pk}"]`))
+      .slice(0, 10);
+
+    for (const t of filtered) {
+      const li = document.createElement('li');
+      li.className = 'list-group-item list-group-item-action';
+      li.textContent = t.name;
+      li.dataset.pk = t.pk;
+      li.tabIndex = 0;
+      li.addEventListener('click', () => selectTag(t));
+      suggestions.appendChild(li);
+    }
+    selectedIndex = -1;
+    suggestions.style.display = filtered.length ? 'block' : 'none';
+  });
+
+  // Keyboard navigation
+  searchInput.addEventListener('keydown', e => {
+    const items = suggestions.querySelectorAll('li');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex + 1) % items.length;
+      items[selectedIndex].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      items[selectedIndex].focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0) items[selectedIndex].click();
+    }
+  });
+
+  function selectTag(t) {
+    addTag(t.pk, t.name);
+    searchInput.value = '';
+    suggestions.style.display = 'none';
+    searchInput.focus();
+  }
+
+  function addTag(pk, name) {
+    if (document.querySelector(`#selected-tags span[data-pk="${pk}"]`)) return;
+    const span = document.createElement('span');
+    span.className = 'badge bg-primary position-relative lh-sm me-1 mb-1';
+    span.dataset.pk = pk;
+    span.textContent = name;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-close btn-close-white btn-sm';
+    btn.onclick = () => removeTag(pk);
+    btn.style.cssText = 'position:absolute;top:0;right:0;transform:translate(50%,-50%);';
+    span.appendChild(btn);
+
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'tags';
+    inp.value = pk;
+    span.appendChild(inp);
+
+    document.getElementById('selected-tags').appendChild(span);
+  }
+
+  function removeTag(pk) {
+    const el = document.querySelector(`#selected-tags span[data-pk="${pk}"]`);
+    if (el) el.remove();
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Informationen – Ordneransicht{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3">Ordner-Ansicht</h1>
+  <button id="create-root" class="btn btn-primary">
+    <i class="bi bi-folder-plus"></i> Neuer Root-Ordner
+  </button>
+</div>
+
+<div class="d-flex" style="height: calc(100vh - 300px);">
+  <!-- Linke Seite: Folder-Tree -->
+  <div id="folder-tree" style="width: 300px; overflow:auto; border:1px solid #ddd; padding:10px;"></div>
+
+  <!-- Mittlere Scroll-Area: Infos des aktuellen Ordners -->
+  <div id="info-list" class="flex-grow-1 mx-4 overflow-auto" style="border:1px solid #ddd; padding:10px;">
+    <h5 id="info-title">Unsortierte Informationen</h5>
+    <ul id="infos" class="list-group mb-3">
+      <!-- dynamisch per JS -->
+    </ul>
+  </div>
+</div>
+
+<!-- Unten: Übersicht aller Root-Ordner als zusätzliche Drop-Zone -->
+<div class="mt-3">
+  <h5>Root-Ordner (Drop-Zone)</h5>
+  <div id="root-folders" class="d-flex flex-wrap gap-2">
+    <!-- wird per JS befüllt -->
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jstree/dist/themes/default/style.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/jstree/dist/jstree.min.js"></script>
+<script>
+$(function(){
+
+  // Hilfsfunktion: Infos für folderId laden
+  function loadInfos(folderId, folderName){
+    $('#info-title').text(folderName || 'Unsortierte Informationen');
+    $('#infos').empty();
+    $.getJSON(`/information/api/folders/${folderId||0}/infos/`, function(items){
+      items.forEach(i => {
+        $('#infos').append(
+          `<li class="list-group-item" data-info-id="${i.id}" draggable="true">
+             ${i.datetime} – ${i.title}
+           </li>`
+        );
+      });
+      enableDrag();
+    });
+  }
+
+  // 1) jsTree initialisieren (gleich wie gehabt)
+  $('#folder-tree').jstree({
+    core: {
+      data: {
+        url: '/information/api/folders/tree/',
+        dataType: 'json'
+      },
+      check_callback: true
+    },
+    plugins: ['dnd','state','types','contextmenu'],
+    types: { default: { icon: 'bi bi-folder' } },
+    contextmenu: {
+      items: node => ({
+        create: {
+          label: "Unterordner anlegen",
+          action: () => {
+            let name = prompt("Name des Unterordners:");
+            if (!name) return;
+            $.post('/information/api/folders/create/',
+                   JSON.stringify({ name, parent_id: node.id }),
+                   res => {
+                     $('#folder-tree').jstree(true)
+                       .create_node(node, { id: res.id, text: res.text, children: false }, 'last');
+                   }, 'json');
+          }
+        }
+      })
+    }
+  })
+  .on('select_node.jstree', (e,data) => loadInfos(data.node.id, data.node.text))
+  .on('open_node.jstree', (e,data) => {
+    // nur Kinder nachladen
+    const tree = $('#folder-tree').jstree(true);
+    tree.get_node(data.node, true).children('.jstree-children').empty();
+    $.getJSON(`/information/api/folders/${data.node.id}/children/`, children => {
+      children.forEach(c => {
+        tree.create_node(data.node, { id: c.id, text: c.text, children: c.children }, 'last');
+      });
+    });
+  });
+
+  // 2) Neuer Root-Ordner
+  $('#create-root').click(() => {
+    let name = prompt("Name des neuen Root-Ordners:");
+    if (!name) return;
+    $.post('/information/api/folders/create/',
+           JSON.stringify({ name }), res => {
+      $('#folder-tree').jstree(true)
+        .create_node('#', { id: res.id, text: res.text, children: false }, 'last');
+      // auch in der Root-Übersicht ergänzen
+      addRootFolderCard(res.id, res.text);
+    }, 'json');
+  });
+
+  // 3) Infos laden – initial ungeordnete
+  loadInfos(null, '');
+
+  // 4) Dragstart für Infos
+  function enableDrag(){
+    $('#infos li').on('dragstart', e => {
+      e.originalEvent.dataTransfer.setData('text/plain',
+        $(e.target).data('info-id'));
+    });
+  }
+
+  // 5) Drop-Handling im Tree (wie gehabt)
+  $('#folder-tree').on('dnd_stop.vakata', (e,data) => {
+    let target = $(data.event.target).closest('li.jstree-node');
+    if (!target.length) return;
+    let folderId = target.attr('id');
+    let infoId   = data.data.nodes[0];
+    $.ajax({
+      url: `/information/api/information/${infoId}/move/`,
+      method: 'PATCH',
+      contentType: 'application/json',
+      data: JSON.stringify({ folder_id: folderId })
+    }).done(() => {
+      loadInfos(folderId, target.text());
+    });
+  });
+
+  // 6) Root-Ordner-Übersicht befüllen
+  function addRootFolderCard(id, text){
+    const card = $(`
+      <div class="card p-2 text-center drop-zone" style="width:120px;"
+           data-folder-id="${id}">
+        <i class="bi bi-folder-fill fs-1"></i>
+        <div>${text}</div>
+      </div>`);
+    $('#root-folders').append(card);
+    makeDroppable(card);
+  }
+  function loadRootFolders(){
+    $.getJSON('/information/api/folders/tree/', roots => {
+      roots.forEach(r => addRootFolderCard(r.id, r.text));
+    });
+  }
+  // mach aus einem jQuery-Card-Element eine Droppable-Zone
+  function makeDroppable($el){
+    $el.on('dragover', e => e.preventDefault());
+    $el.on('drop', e => {
+      e.preventDefault();
+      const folderId = $el.data('folder-id');
+      const infoId   = e.originalEvent.dataTransfer.getData('text/plain');
+      $.ajax({
+        url: `/information/api/information/${infoId}/move/`,
+        method: 'PATCH',
+        contentType: 'application/json',
+        data: JSON.stringify({ folder_id: folderId })
+      }).done(() => {
+        // wenn aktuell ungeordnet angezeigt, neu laden
+        const current = $('#folder-tree').jstree('get_selected')[0];
+        if (!current) loadInfos(null,'Unsortierte Informationen');
+      });
+    });
+  }
+
+  // 7) Starte mit Laden der Root-Übersicht
+  loadRootFolders();
+});
+</script>
+{% endblock %}

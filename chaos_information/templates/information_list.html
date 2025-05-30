@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Informationen – My AI App{% endblock %}
+
+{% block content %}
+
+<style>
+    .flash-success {
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.5);
+        transition: box-shadow 0.3s ease;
+    }
+</style>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3">Informationen</h1>
+  </div>
+
+  <form method="get" class="mb-4" id="filter-form">
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      {{ filter_form.object_type.label_tag }}
+      {{ filter_form.object_type }}
+    </div>
+    <div class="col-md-3">
+      {{ filter_form.vault.label_tag }}
+      {{ filter_form.vault }}
+    </div>
+    <div class="col-md-3">
+      {{ filter_form.q.label_tag }}
+      {{ filter_form.q }}
+    </div>
+    <div class="col-md-3">
+      {{ filter_form.text.label_tag }}
+      {{ filter_form.text }}
+    </div>
+  </div>
+    <!-- Zeile: Tag-Suche + Badges -->
+    <div id="tag-section">
+      <div class="row g-3 mb-2">
+        <div class="col-12">
+          <label for="tag-search">Tag</label>
+          <input type="text" id="tag-search" class="form-control" placeholder="Tag suchen…">
+          <ul id="tag-suggestions"
+              class="list-group position-absolute w-100"
+              style="z-index:1000; max-height:200px; overflow:auto; display:none;">
+          </ul>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-12">
+          <div id="selected-tags" class="d-flex flex-wrap gap-1">
+            {% for tag in selected_tags %}
+              <span class="badge bg-primary position-relative lh-sm" data-pk="{{ tag.pk }}">
+                {{ tag.name }}
+                <button type="button" class="btn-close btn-close-white btn-sm"
+                        aria-label="Entfernen"
+                        onclick="removeTag({{ tag.pk }})"
+                        style="position:absolute;top:0;right:0;transform:translate(50%,-50%);">
+                  <span class="visually-hidden">Entfernen</span>
+                </button>
+                <input type="hidden" name="tags" value="{{ tag.pk }}">
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zeile: Datum, Status, Sortierung -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        {{ filter_form.date_from.label_tag }} {{ filter_form.date_from }}
+      </div>
+      <div class="col-md-3">
+        {{ filter_form.date_to.label_tag }} {{ filter_form.date_to }}
+      </div>
+      <div class="col-md-3">
+        {{ filter_form.status.label_tag }} {{ filter_form.status }}
+      </div>
+      <div class="col-md-3">
+        {{ filter_form.order.label_tag }} {{ filter_form.order }}
+      </div>
+    </div>
+
+    <!-- Zeile: Buttons -->
+    <div class="row mt-3">
+      <div class="col-md-6">
+        <button type="submit" class="btn btn-outline-secondary w-100">Filtern</button>
+      </div>
+      <div class="col-md-6">
+        <a href="{% url 'information_list' %}" class="btn btn-outline-danger w-100">Zurücksetzen</a>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- Tabelle -->
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Titel</th>
+        <th>Ordner</th>
+        <th>Vault</th>
+        <th>Status</th>
+        <th class="text-end">Aktionen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for info in infos %}
+        <tr>
+          <td>{{ info.datetime|date:"Y-m-d H:i" }}</td>
+          <td class="info-title">{{ info.title }}</td>
+          <td>
+            {% if info.folder %}
+              {{ info.folder.get_full_path }}
+            {% else %}
+              <span class="text-muted">–</span>
+            {% endif %}
+          </td>
+          <td>
+            <select class="form-select form-select-sm vault-select"
+                    data-pk="{{ info.pk }}"
+                    data-url="{% url 'update_information_vault' info.pk %}">
+              <option value="">—</option>
+              {% for vault in all_vaults %}
+                <option value="{{ vault.pk }}" {% if info.vault == vault %}selected{% endif %}>
+                  {{ vault.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <select class="form-select form-select-sm status-select"
+                    data-pk="{{ info.pk }}"
+                    data-url="{% url 'information_toggle_status' info.pk %}">
+              {% for val,label in info.STATUS_CHOICES %}
+                <option value="{{ val }}" {% if info.status == val %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-secondary" href="{% url 'information_edit' info.pk %}">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a class="btn btn-sm btn-primary" href="{% url 'information_edit' info.pk %}">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a class="btn btn-sm btn-danger" href="{% url 'information_delete' info.pk %}" onclick="return confirm('Wirklich löschen?')">
+              <i class="bi bi-trash"></i>
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="6" class="small text-muted pt-2 pb-3">
+            <strong>Tags:</strong>
+            {% for tag in info.tags.all %}
+              <span class="badge bg-info me-1">{{ tag.name }}</span>
+            {% empty %}
+              <span class="text-muted">Keine</span>
+            {% endfor %}
+            {% if info.information_short %}
+              <div class="mt-2"><strong>Text:</strong> {{ info.information_short|truncatewords:25 }}</div>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            Keine Einträge gefunden.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+    <nav aria-label="Seiten-Navigation">
+      <ul class="pagination justify-content-center">
+        {% with query=request.GET.urlencode %}
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?{% if query %}{{ query }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                «
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">«</span></li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            <li class="page-item{% if num == page_obj.number %} active{% endif %}">
+              <a class="page-link"
+                 href="?{% if query %}{{ query }}&{% endif %}page={{ num }}">
+                {{ num }}
+              </a>
+            </li>
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?{% if query %}{{ query }}&{% endif %}page={{ page_obj.next_page_number }}">
+                »
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">»</span></li>
+          {% endif %}
+        {% endwith %}
+      </ul>
+    </nav>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // CSRF-Helfer
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Live-Vault-Aktualisierung
+  document.querySelectorAll('.vault-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const url = sel.dataset.url;
+      const vault = sel.value;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ vault })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.ok) throw new Error();
+        sel.classList.add('flash-success');
+        setTimeout(() => sel.classList.remove('flash-success'), 800);
+      })
+      .catch(() => alert('Vault konnte nicht geändert werden.'));
+    });
+  });
+
+  // Live-Status-Aktualisierung
+  document.querySelectorAll('.status-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const url = sel.dataset.url;
+      const status = sel.value;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ status })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.ok) throw new Error();
+        sel.classList.add('flash-success');
+        setTimeout(() => sel.classList.remove('flash-success'), 800);
+      })
+      .catch(() => alert('Status konnte nicht geändert werden.'));
+    });
+  });
+
+  // Auto-Submit bei Filteränderung (ohne Tags)
+  document.querySelectorAll('#filter-form input, #filter-form select').forEach(el => {
+    if (!el.closest('#tag-section')) {
+      el.addEventListener('change', () => {
+        document.getElementById('filter-form').submit();
+      });
+    }
+  });
+
+  // Autocomplete für Tags
+  const allTags = [{% for tag in filter_form.fields.tags.queryset %}{ pk: {{ tag.pk }}, name: '{{ tag.name|escapejs }}' }{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const searchInput = document.getElementById('tag-search');
+  const suggestions = document.getElementById('tag-suggestions');
+  let selectedIndex = -1;
+
+  searchInput.addEventListener('input', () => {
+    const val = searchInput.value.toLowerCase();
+    suggestions.innerHTML = '';
+    if (!val) { suggestions.style.display = 'none'; return; }
+    const matches = allTags.filter(t => t.name.toLowerCase().includes(val)
+      && !document.querySelector('#selected-tags span[data-pk="'+t.pk+'"]')
+    );
+    matches.slice(0,10).forEach((t, i) => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item list-group-item-action';
+      li.textContent = t.name;
+      li.dataset.pk = t.pk;
+      li.tabIndex = 0;
+      li.addEventListener('click', () => selectSuggestion(t));
+      suggestions.appendChild(li);
+    });
+    selectedIndex = -1;
+    suggestions.style.display = matches.length ? 'block' : 'none';
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    const items = suggestions.querySelectorAll('li');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex + 1) % items.length;
+      items[selectedIndex].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      items[selectedIndex].focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0) items[selectedIndex].click();
+    }
+  });
+
+  function selectSuggestion(t) {
+    addTag(t.pk, t.name);
+    searchInput.value = '';
+    suggestions.style.display = 'none';
+    searchInput.focus();
+  }
+
+  function addTag(pk, name) {
+    if (document.querySelector('#selected-tags span[data-pk="'+pk+'"]')) return;
+    const span = document.createElement('span');
+    span.className = 'badge bg-primary position-relative lh-sm me-1 mb-1';
+    span.dataset.pk = pk;
+    span.textContent = name;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-close btn-close-white btn-sm';
+    btn.style.cssText = 'position:absolute;top:0;right:0;transform:translate(50%,-50%);';
+    btn.onclick = () => removeTag(pk);
+    span.appendChild(btn);
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'tags';
+    inp.value = pk;
+    span.appendChild(inp);
+    document.getElementById('selected-tags').appendChild(span);
+  }
+
+  function removeTag(pk) {
+    const b = document.querySelector('#selected-tags span[data-pk="'+pk+'"]');
+    if (b) b.remove();
+  }
+</script>
+{% endblock %}

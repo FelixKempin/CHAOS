@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% load static widget_tweaks %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/base_style.css' %}">
+{% endblock %}
+
+{% block title %}
+  {% if form.instance.pk %}Information bearbeiten{% else %}Neue Information{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card bg-light border-secondary mb-4">
+    <div class="card-body">
+      <h1 class="h3 text-primary mb-4">
+        {% if form.instance.pk %}Information bearbeiten{% else %}Neue Information{% endif %}
+      </h1>
+      <form method="post" id="info-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="row g-3">
+          <!-- Titel -->
+          <div class="col-md-6">
+            {{ form.title.label_tag }}
+            {% render_field form.title class="form-control" %}
+            {{ form.title.errors }}
+          </div>
+
+          <!-- Status -->
+          <div class="col-md-3">
+            {{ form.status.label_tag }}
+            {% render_field form.status class="form-select" %}
+            {{ form.status.errors }}
+          </div>
+
+          <!-- Draft -->
+          <div class="col-md-3 d-flex align-items-center">
+            <div class="form-check mt-3">
+              {% render_field form.draft class="form-check-input me-2" %}
+              <label class="form-check-label">Entwurf</label>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="col-12">
+            <label class="form-label">Tags auswählen</label>
+            <div class="position-relative mb-2">
+              <input type="text" id="tag-search" class="form-control" placeholder="Tag suchen…">
+              <ul id="tag-suggestions"
+                  class="list-group position-absolute w-100"
+                  style="z-index:1000; max-height:200px; overflow:auto; display:none;"></ul>
+            </div>
+            <div id="selected-tags" class="d-flex flex-wrap gap-2">
+              {% for tag in selected_tags %}
+                <span data-pk="{{ tag.pk }}" class="badge bg-primary position-relative lh-sm me-2 mb-2">
+                  {{ tag.name }}
+                  <button type="button" class="btn-close btn-close-white btn-sm"
+                          onclick="removeTag('{{ tag.pk }}')"
+                          style="position:absolute;top:0;right:0;transform:translate(50%,-50%);"></button>
+                  <input type="hidden" name="tags" value="{{ tag.pk }}">
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Kurzinformation -->
+          <div class="col-md-6">
+            {{ form.information_short.label_tag }}
+            {% render_field form.information_short class="form-control" %}
+          </div>
+
+          <!-- Lange Information -->
+          <div class="col-md-6">
+            {{ form.information_long.label_tag }}
+            {% render_field form.information_long class="form-control" %}
+          </div>
+
+          <!-- Originaltext -->
+          <div class="col-md-6">
+            {{ form.information_original.label_tag }}
+            {% render_field form.information_original class="form-control" %}
+          </div>
+
+          <!-- Ordner -->
+          <div class="col-md-6">
+            {{ form.folder.label_tag }}
+            {% render_field form.folder class="form-select" %}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex justify-content-end">
+          <button type="submit" class="btn btn-primary me-2">Speichern</button>
+          <a href="{% url 'information_list' %}" class="btn btn-outline-secondary">Abbrechen</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if form.instance.pk and form.instance.content_object %}
+    <div class="card bg-light border-secondary mb-4">
+      <div class="card-body">
+        <h3 class="h5 text-primary mb-3">Verknüpftes Objekt</h3>
+        {% with obj=form.instance.content_object model=form.instance.object_type_string %}
+          {% if model == "pdf_document" %}
+            <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">PDF öffnen</a></p>
+            <iframe src="{{ obj.file.url }}" width="100%" height="400px" class="border"></iframe>
+          {% elif model == "img_document" %}
+            <p><strong>Bild:</strong></p>
+            <img src="{{ obj.file.url }}" alt="Bild" class="img-fluid border mb-3">
+          {% elif model in "text_document markdown_document csv_document" %}
+            <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
+            <pre class="bg-dark p-3 border rounded text-wrap">{{ obj.file.read|default:"(Inhalt kann nicht angezeigt werden)" }}</pre>
+          {% elif model == "audio_document" %}
+            <p><strong>Audio:</strong></p>
+            <audio controls src="{{ obj.file.url }}" class="w-100">Dein Browser unterstützt kein Audio.</audio>
+          {% elif model == "message" %}
+            <p><strong>Nachricht:</strong></p>
+            <div class="border p-3 bg-dark rounded text-wrap">{{ obj.text|linebreaks }}</div>
+          {% else %}
+            <p><em>Typ: "{{ model }}"</em></p>
+            <pre class="bg-dark p-3 border rounded text-wrap">{{ obj }}</pre>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if related_infos %}
+    <div class="card bg-light border-secondary mb-4">
+      <div class="card-body">
+        <h3 class="h5 text-primary mb-3">Ähnliche Informationen</h3>
+        <ul class="list-group list-group-flush">
+          {% for rel in related_infos %}
+            <li class="list-group-item bg-dark d-flex justify-content-between align-items-center border-secondary">
+              <div>
+                <a href="{% url 'information_edit' rel.info.pk %}" class="text-primary">
+                  {{ rel.info.title }}
+                </a>
+                <small class="text-muted d-block">{{ rel.info.datetime|date:"Y-m-d H:i" }}</small>
+              </div>
+              <span class="badge bg-secondary">{{ rel.distance|floatformat:2 }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const allTags    = [{% for t in all_tags %}{ pk: {{ t.pk }}, name: '{{ t.name|escapejs }}' }{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const searchInput = document.getElementById('tag-search');
+  const suggestions = document.getElementById('tag-suggestions');
+  const createUrl   = "{% url 'tag-create-ajax' %}";
+  const csrfToken   = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  let selectedIndex = -1;
+
+  searchInput.addEventListener('input', () => {
+    const q      = searchInput.value.trim();
+    const qLower = q.toLowerCase();
+    suggestions.innerHTML = '';
+    if (!q) { suggestions.style.display = 'none'; return; }
+
+    // Bestehende Tags filtern
+    const filtered = allTags
+      .filter(t => t.name.toLowerCase().includes(qLower))
+      .filter(t => !document.querySelector(`#selected-tags span[data-pk="${t.pk}"]`))
+      .slice(0, 10);
+
+    filtered.forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item list-group-item-action bg-dark text-light';
+      li.textContent = t.name;
+      li.dataset.pk = t.pk;
+      li.tabIndex = 0;
+      li.addEventListener('click', () => selectTag(t.pk, t.name));
+      suggestions.appendChild(li);
+    });
+
+    // Vorschlag, neuen Tag anzulegen
+    const exact = allTags.some(t => t.name.toLowerCase() === qLower);
+    if (!exact) {
+      const liNew = document.createElement('li');
+      liNew.className = 'list-group-item list-group-item-action bg-dark text-info';
+      liNew.textContent = `Neuen Tag erstellen: "${q}"`;
+      liNew.dataset.name = q;
+      liNew.tabIndex = 0;
+      liNew.addEventListener('click', () => createTag(q));
+      suggestions.appendChild(liNew);
+    }
+
+    selectedIndex = -1;
+    suggestions.style.display = suggestions.children.length ? 'block' : 'none';
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    const items = suggestions.querySelectorAll('li');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex + 1) % items.length;
+      items[selectedIndex].focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      items[selectedIndex].focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0) items[selectedIndex].click();
+    }
+  });
+
+  function selectTag(pk, name) {
+    addTag(pk, name, false);
+    resetSearch();
+  }
+
+  function addTag(val, name, isNew) {
+    const key = isNew ? `new:${name}` : val;
+    if (document.querySelector(`#selected-tags span[data-pk="${key}"]`)) return;
+
+    const span = document.createElement('span');
+    span.className = 'badge bg-primary position-relative lh-sm me-2 mb-2';
+    span.dataset.pk = key;
+    span.textContent = name;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-close btn-close-white btn-sm';
+    btn.onclick = () => removeTag(key);
+    btn.style.cssText = 'position:absolute; top:0; right:0; transform:translate(50%,-50%);';
+    span.appendChild(btn);
+
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'tags';
+    inp.value = isNew ? `new:${name}` : val;
+    span.appendChild(inp);
+
+    document.getElementById('selected-tags').appendChild(span);
+  }
+
+  function removeTag(key) {
+    const el = document.querySelector(`#selected-tags span[data-pk="${key}"]`);
+    if (el) el.remove();
+  }
+
+  function createTag(name) {
+    fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ name }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.pk && data.name) {
+        allTags.push({ pk: data.pk, name: data.name });
+        addTag(data.pk, data.name, true);
+        resetSearch();
+      } else if (data.error) {
+        console.error(data.error);
+      }
+    })
+    .catch(console.error);
+  }
+
+  function resetSearch() {
+    searchInput.value = '';
+    suggestions.innerHTML = '';
+    suggestions.style.display = 'none';
+    searchInput.focus();
+  }
+</script>
+{% endblock %}

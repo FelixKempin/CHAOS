@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+/media
+/staticfiles
+/static
+.env
+.env.*
+
+# Virtual env
+venv/
+.env/
+.venv/
+pip-wheel-metadata/
+
+# VSCode/PyCharm
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+*.sock
+*.tar
+docker-compose.override.yml
+
+# Celery / Cache
+celerybeat-schedule
+*.mo
+
+# PDFs & AI Outputs (optional)
+*.pdf
+*.png
+*.jpg
+outputs/

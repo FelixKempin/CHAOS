@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Löschen bestätigen{% endblock %}
+{% block content %}
+<div class="card border-danger">
+  <div class="card-header bg-danger text-white">
+    Löschen bestätigen
+  </div>
+  <div class="card-body">
+    <p>Möchtest du die Information <strong>{{ object.title }}</strong> wirklich löschen?</p>
+    <form method="post">
+      {% csrf_token %}
+      <a href="{% url 'information_list' %}" class="btn btn-outline-secondary">Abbrechen</a>
+      <button type="submit" class="btn btn-danger">Ja, löschen</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Neuen Thread erstellen</h1>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-success">Anlegen</button>
+  <a href="{% url 'thread_list' %}" class="btn btn-secondary">Abbrechen</a>
+</form>
+{% endblock %}

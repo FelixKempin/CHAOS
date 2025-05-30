@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- Suchfeld & Slider -->
+  <div class="card mb-4 p-3 filter-card">
+    <div class="row g-3 align-items-center">
+      <div class="col-auto">
+        <input id="search-input" type="text" class="form-control"
+               placeholder="Suchbegriff eingeben…">
+      </div>
+      <div class="col">
+        <label for="threshold" class="form-label">Max. Distanz:</label>
+        <input id="threshold" type="range"
+               min="0" max="0.5" step="0.001" value="0.25"
+               class="form-range w-100">
+        <small>Wert: <span id="th-value">0.25</span></small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map & Detail -->
+  <div class="d-flex" style="gap:1rem;">
+    <div id="scatter" style="flex:1; height:600px;"></div>
+    <div id="detail" class="card p-3" style="width:300px;">
+      <em>Punkt auswählen für Details</em>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const infos = {{ info_points|safe }},
+        tags  = {{ tag_points|safe }};
+
+  const layout = {
+    paper_bgcolor: '#121212',
+    plot_bgcolor: '#121212',
+    font: { color: '#e0e0e0' },
+    hovermode: 'closest',
+    xaxis: { zeroline: false },
+    yaxis: { zeroline: false }
+  };
+  const originalInfoTrace = {
+    x: infos.map(p => p.x),
+    y: infos.map(p => p.y),
+    text: infos.map(p => p.label),
+    customdata: infos.map(p => [p.url, p.label]),
+    mode: 'markers',
+    type: 'scatter',
+    name: 'Info',
+    marker: { size: 8, color: 'cyan' }
+  };
+  const originalTagTrace = {
+    x: tags.map(p => p.x),
+    y: tags.map(p => p.y),
+    text: tags.map(p => p.label),
+    mode: 'markers',
+    type: 'scatter',
+    name: 'Tag',
+    marker: { size: 6, color: 'magenta', symbol: 'diamond' }
+  };
+
+  Plotly.newPlot('scatter', [originalInfoTrace, originalTagTrace], layout);
+
+  function debounce(fn, ms = 300) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+  const input  = document.getElementById('search-input'),
+        slider = document.getElementById('threshold'),
+        thVal  = document.getElementById('th-value');
+
+  async function updateNeighbors() {
+    const q   = input.value.trim(),
+          thr = parseFloat(slider.value);
+    thVal.textContent = thr.toFixed(3);
+
+    if (!q) {
+      Plotly.react('scatter', [originalInfoTrace, originalTagTrace], layout);
+      return;
+    }
+
+    const resp = await fetch(
+      `{% url 'information_map_search' %}` +
+      `?q=${encodeURIComponent(q)}&threshold=${thr}`
+    );
+    const { info_ids, tag_ids } = await resp.json();
+
+    const filteredInfos = infos.filter(p => info_ids.includes(p.id));
+    const filteredTags  = tags.filter(p => tag_ids.includes(p.id));
+
+    const infoTrace = {
+      x: filteredInfos.map(p => p.x),
+      y: filteredInfos.map(p => p.y),
+      text: filteredInfos.map(p => p.label),
+      customdata: filteredInfos.map(p => [p.url, p.label]),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Info',
+      marker: { size: 8, color: 'cyan' }
+    };
+    const tagTrace = {
+      x: filteredTags.map(p => p.x),
+      y: filteredTags.map(p => p.y),
+      text: filteredTags.map(p => p.label),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Tag',
+      marker: { size: 6, color: 'magenta', symbol: 'diamond' }
+    };
+
+    Plotly.react('scatter', [infoTrace, tagTrace], layout);
+  }
+
+  const deb = debounce(updateNeighbors, 400);
+  input.addEventListener('input', deb);
+  slider.addEventListener('input', deb);
+
+  document.getElementById('scatter').on('plotly_click', e => {
+    const pt = e.points[0],
+          [url, label] = pt.customdata;
+    document.getElementById('detail').innerHTML = `
+      <h5>${label}</h5>
+      <a href="${url}" target="_blank" class="btn btn-sm btn-primary">Öffnen</a>
+    `;
+  });
+</script>
+{% endblock %}
