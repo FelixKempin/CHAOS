@@ -13,13 +13,11 @@ from chaos_embeddings.models import Embedding  # GenericRelation referenziert di
 
 logger = logging.getLogger(__name__)
 
-
 class Agent(models.Model):
     active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.get_agent_type_display()} – {self.name}"
-
 
 class Action(models.Model):
     STATUS_CHOICES = [
@@ -76,29 +74,6 @@ class Action(models.Model):
             raise
         finally:
             self.save(update_fields=['status'])
-
-"""
-class AgentAction(Action):
-    function_name   = models.CharField(max_length=100)
-    parameters      = models.JSONField(null=True, blank=True)
-    result          = models.JSONField(null=True, blank=True)
-    information_id  = models.CharField(max_length=64)
-
-    def execute(self):
-        meta = ACTION_REGISTRY.get(self.function_name)
-        if not meta:
-            raise ValueError(f"Unknown action: {self.function_name}")
-        func = meta["func"]
-        try:
-            output = func(self.information_id)
-            self.result = {"status": "success", "output": output}
-            self.status = "success"
-        except Exception as e:
-            logger.exception(f"Error executing {self.function_name}")
-            self.result = {"status": "error", "error": str(e)}
-            self.status = "failed"
-        self.save(update_fields=["status", "result"])
-"""
 
 class UserAction(Action):
     user_comment = models.TextField(blank=True)
@@ -183,6 +158,12 @@ class Information(models.Model):
     information_original = models.TextField(blank=True)
     draft                = models.BooleanField(default=False)
     evaluated            = models.BooleanField(default=False)
+
+    last_edited = models.DateTimeField(auto_now=True)
+    last_seen_by_user = models.DateTimeField(null=True, blank=True)
+    last_seen_by_agent = models.DateTimeField(null=True, blank=True)
+    last_relevance_evaluation = models.DateTimeField(null=True, blank=True)
+    relevance_score = models.FloatField(default=1.0)
 
     content_type         = models.ForeignKey(
                              ContentType, on_delete=models.CASCADE,
@@ -287,5 +268,3 @@ class RequiredInformation(models.Model):
 
     class Meta:
         unique_together = [('action','information')]
-
-# Document‐Models bleiben unverändert…

@@ -1,28 +1,32 @@
+{# templates/calendar/todo_form.html #}
 {% extends "base.html" %}
-{% load static %}
-
-{% block extra_head %}
-  <link href="{% static 'css/base_style.css' %}" rel="stylesheet">
-{% endblock %}
-
 {% block content %}
-<div class="container">
-  <h2>To-Do anlegen</h2>
-  <form method="post">
+<div class="container mt-4">
+  <h2 class="text-light">
+    {% if object %}To-Do bearbeiten{% else %}Neues To-Do anlegen{% endif %}
+  </h2>
+  <form method="post" class="mb-4">
     {% csrf_token %}
     {{ form.non_field_errors }}
     {% for field in form %}
       <div class="mb-3">
-        <label class="form-label">{{ field.label }}</label>
-        {{ field }}
+        <label class="form-label text-light">{{ field.label }}</label>
+        {{ field|add_class:"form-control" }}
         {% if field.help_text %}
-          <div class="form-text">{{ field.help_text }}</div>
+          <div class="form-text text-secondary">{{ field.help_text }}</div>
         {% endif %}
         {{ field.errors }}
       </div>
     {% endfor %}
-    <button class="btn btn-primary" type="submit">Speichern</button>
-    <a href="{% url 'calendar:calendar' %}" class="btn btn-secondary">Abbrechen</a>
+    <button class="btn btn-primary me-2" type="submit">
+      {% if object %}Speichern{% else %}Erstellen{% endif %}
+    </button>
+    <a href="{% url 'calendar:calendar' %}" class="btn btn-outline-secondary">Abbrechen</a>
+    {% if object %}
+      <a href="{% url 'calendar:todo_delete' object.pk %}" class="btn btn-outline-danger ms-2">
+        Löschen
+      </a>
+    {% endif %}
   </form>
 </div>
 {% endblock %}

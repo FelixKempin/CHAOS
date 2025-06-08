@@ -1,10 +1,104 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{# chaos_documents/templates/chaos_documents/markdown_document_form.html #}
+{% extends "base.html" %}
+{% load static %}
 
-</body>
-</html>
+{% block content %}
+  <h1>
+    {% if object %}Markdown bearbeiten{% else %}Neues Markdown-Dokument{% endif %}
+  </h1>
+
+  {# Dark-Mode CSS #}
+  <link rel="stylesheet" href="{% static 'css/base_style.css' %}">
+
+  {# Toast UI Editor CSS lokal #}
+  <link
+    rel="stylesheet"
+    href="{% static 'vendor/toastui-editor/toastui-editor.min.css' %}"
+  />
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      {{ form.name.label_tag }}
+      {{ form.name }}
+    </div>
+    <div class="mb-3">
+      {{ form.meta_description.label_tag }}
+      {{ form.meta_description }}
+    </div>
+
+    {# Editor-Container #}
+    <div
+      id="editor"
+      data-upload-url="{{ upload_url }}"
+      style="height: 600px; border: 1px solid #444; margin-bottom: 1rem;"
+    ></div>
+
+    <button type="submit" class="btn btn-primary">
+      {% if object %}Speichern{% else %}Anlegen{% endif %}
+    </button>
+    <a href="{% url 'markdown_document_list' %}" class="btn btn-outline-secondary">
+      Abbrechen
+    </a>
+  </form>
+
+  {# Toast UI Editor JS lokal #}
+  <script src="{% static 'vendor/toastui-editor/toastui-editor-all.min.js' %}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function(){
+      const container = document.getElementById('editor');
+      const initial = `{{ initial_markdown|escapejs }}`;
+      const uploadUrl = container.dataset.uploadUrl;
+
+      const editor = new toastui.Editor({
+        el: container,
+        initialEditType: 'markdown',
+        previewStyle: 'tab',
+        height: '600px',
+        initialValue: initial,
+        toolbarItems: [
+          ['heading','bold','italic','strike'],
+          ['hr','quote'],
+          ['ul','ol','task'],
+          ['link','image'],
+          ['code','codeblock'],
+          ['preview','fullscreen']
+        ],
+        hooks: {
+          addImageBlobHook: (blob, callback) => {
+            if (uploadUrl) {
+              const form = new FormData();
+              form.append('file', blob, blob.name);
+              fetch(uploadUrl, {
+                method: 'POST',
+                body: form,
+                headers: {
+                  'X-CSRFToken': document.cookie.replace(/.*csrftoken=([^;]+).*/, '$1')
+                }
+              })
+              .then(r => r.json())
+              .then(data => {
+                if (data.url) callback(data.url, '');
+              });
+              return false;
+            } else {
+              const reader = new FileReader();
+              reader.onload = () => callback(reader.result, blob.name);
+              reader.readAsDataURL(blob);
+              return false;
+            }
+          }
+        }
+      });
+
+      document.querySelector('form').addEventListener('submit', function(){
+        const md = editor.getMarkdown();
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'file_content';
+        hidden.value = md;
+        this.appendChild(hidden);
+      });
+    });
+  </script>
+{% endblock %}

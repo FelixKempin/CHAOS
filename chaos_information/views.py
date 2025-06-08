@@ -210,6 +210,14 @@ class InformationUpdateView(UpdateView):
     template_name = "information_form.html"
     success_url = reverse_lazy('information_list')
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Tags explizit setzen (ersetzen die aktuelle Auswahl)
+        tag_pks = self.request.POST.getlist('tags')
+        # Ggf. neue Tags (z.B. mit "new:..." prefix) herausfiltern, falls die im JS noch vorkommen könnten
+        valid_pks = [pk for pk in tag_pks if pk.isdigit()]
+        self.object.tags.set(valid_pks)
+        return response
     def get_related_infos(self):
         cache_key = f"related_infos_{self.object.pk}"
         cached = cache.get(cache_key)
@@ -324,35 +332,6 @@ class EmbeddingMapView(TemplateView):
         ]
 
         return ctx
-
-class InformationDetailView(DetailView):
-    """
-    Detail-View für eine Information.
-    """
-    model = Information
-    template_name = 'information_detail.html'  # bestehendes Template
-    context_object_name = 'information'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        info = self.object
-        # Hole das zugehörige Embedding (falls vorhanden)
-        info_ct = ContentType.objects.get_for_model(Information)
-        try:
-            emb = Embedding.objects.get(
-                content_type=info_ct,
-                object_id=str(info.pk)
-            )
-            ctx['embedding'] = emb.vector
-            ctx['cluster_id'] = emb.cluster_id
-        except Embedding.DoesNotExist:
-            ctx['embedding'] = None
-            ctx['cluster_id'] = None
-
-        # Kontext für weitere Verknüpfungen
-        ctx['tags'] = info.tags.all()
-        return ctx
-
 
 
 

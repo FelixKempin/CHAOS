@@ -150,51 +150,58 @@
 </div>
 {% endblock %}
 
+
 {% block extra_js %}
 <script>
-  const allTags    = [{% for t in all_tags %}{ pk: {{ t.pk }}, name: '{{ t.name|escapejs }}' }{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const searchInput = document.getElementById('tag-search');
-  const suggestions = document.getElementById('tag-suggestions');
-  const createUrl   = "{% url 'tag-create-ajax' %}";
-  const csrfToken   = document.querySelector('[name=csrfmiddlewaretoken]').value;
-  let selectedIndex = -1;
+  const searchInput   = document.getElementById('tag-search');
+  const suggestions   = document.getElementById('tag-suggestions');
+  const createUrl     = "{% url 'tag-create-ajax' %}";
+  const autocompleteUrl = "{% url 'tag-autocomplete' %}";
+  const csrfToken     = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  let selectedIndex   = -1;
 
   searchInput.addEventListener('input', () => {
-    const q      = searchInput.value.trim();
-    const qLower = q.toLowerCase();
+    const q = searchInput.value.trim();
     suggestions.innerHTML = '';
     if (!q) { suggestions.style.display = 'none'; return; }
 
-    // Bestehende Tags filtern
-    const filtered = allTags
-      .filter(t => t.name.toLowerCase().includes(qLower))
-      .filter(t => !document.querySelector(`#selected-tags span[data-pk="${t.pk}"]`))
-      .slice(0, 10);
+    fetch(`${autocompleteUrl}?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(data => {
+        // Tag-Suggestions aus der Antwort holen
+        const existingTagPks = Array.from(document.querySelectorAll('#selected-tags span')).map(
+          span => span.dataset.pk
+        );
+        (data.results || []).filter(
+          t => !existingTagPks.includes(String(t.id))
+        ).forEach(t => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item list-group-item-action bg-dark text-light';
+          li.textContent = t.text;
+          li.dataset.pk = t.id;
+          li.tabIndex = 0;
+          li.addEventListener('click', () => selectTag(t.id, t.text));
+          suggestions.appendChild(li);
+        });
 
-    filtered.forEach(t => {
-      const li = document.createElement('li');
-      li.className = 'list-group-item list-group-item-action bg-dark text-light';
-      li.textContent = t.name;
-      li.dataset.pk = t.pk;
-      li.tabIndex = 0;
-      li.addEventListener('click', () => selectTag(t.pk, t.name));
-      suggestions.appendChild(li);
-    });
+        // Prüfen, ob ein exakt gleichnamiges Tag existiert (case-insensitive)
+        const qLower = q.toLowerCase();
+        const exact = (data.results || []).some(
+          t => t.text.toLowerCase() === qLower
+        );
+        if (!exact) {
+          const liNew = document.createElement('li');
+          liNew.className = 'list-group-item list-group-item-action bg-dark text-info';
+          liNew.textContent = `Neuen Tag erstellen: "${q}"`;
+          liNew.dataset.name = q;
+          liNew.tabIndex = 0;
+          liNew.addEventListener('click', () => createTag(q));
+          suggestions.appendChild(liNew);
+        }
 
-    // Vorschlag, neuen Tag anzulegen
-    const exact = allTags.some(t => t.name.toLowerCase() === qLower);
-    if (!exact) {
-      const liNew = document.createElement('li');
-      liNew.className = 'list-group-item list-group-item-action bg-dark text-info';
-      liNew.textContent = `Neuen Tag erstellen: "${q}"`;
-      liNew.dataset.name = q;
-      liNew.tabIndex = 0;
-      liNew.addEventListener('click', () => createTag(q));
-      suggestions.appendChild(liNew);
-    }
-
-    selectedIndex = -1;
-    suggestions.style.display = suggestions.children.length ? 'block' : 'none';
+        selectedIndex = -1;
+        suggestions.style.display = suggestions.children.length ? 'block' : 'none';
+      });
   });
 
   searchInput.addEventListener('keydown', e => {
@@ -261,7 +268,6 @@
     .then(r => r.json())
     .then(data => {
       if (data.pk && data.name) {
-        allTags.push({ pk: data.pk, name: data.name });
         addTag(data.pk, data.name, true);
         resetSearch();
       } else if (data.error) {
@@ -279,3 +285,4 @@
   }
 </script>
 {% endblock %}
+

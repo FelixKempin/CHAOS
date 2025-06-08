@@ -9,6 +9,7 @@ app.autodiscover_tasks([
     'chaos_documents',
     'chaos_information',
     'chaos_embeddings',
-    'chaos_core'
+    'chaos_core',
+    'chaos_routine'
 ])
 

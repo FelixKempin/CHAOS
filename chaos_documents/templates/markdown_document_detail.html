@@ -1,10 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% load file_to_text %}
 
-</body>
-</html>
+{% block content %}
+  <h1>{{ markdown_doc.name|default:"(kein Name)" }}</h1>
+  <p class="text-muted">{{ markdown_doc.meta_description }}</p>
+  <p><small>Erstellt: {{ markdown_doc.date|date:"d.m.Y H:i" }}</small></p>
+
+  {% if markdown_doc.file %}
+    <div class="card p-3 mb-3">
+      <div class="toastui-editor-preview markdown-body">
+        {{ markdown_doc.file|file_to_text|safe }}
+      </div>
+    </div>
+    <a href="{{ markdown_doc.file.url }}" download class="btn btn-outline-secondary">
+      Original herunterladen
+    </a>
+  {% else %}
+    <p>Kein Inhalt verfügbar.</p>
+  {% endif %}
+
+  <a href="{% url 'markdown_document_edit' markdown_doc.pk %}" class="btn btn-primary">
+    Bearbeiten
+  </a>
+  <a href="{% url 'markdown_document_list' %}" class="btn btn-outline-secondary">
+    Zurück zur Liste
+  </a>
+{% endblock %}

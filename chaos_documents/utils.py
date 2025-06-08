@@ -5,6 +5,7 @@ import os
 import logging
 
 logger = logging.getLogger(__name__)
+from django.utils import timezone
 
 def document_upload_to(instance, filename):
     """
@@ -31,3 +32,20 @@ def get_temp_file_from_django_file(django_file_field, suffix=""):
     except Exception as e:
         logger.error(f"Fehler beim Speichern der temporären Datei: {e}")
         raise
+
+
+
+def markdown_image_upload_to(instance, filename):
+    """
+    Speicherort für eingefügte Bilder:
+    markdown_images/YYYY/MM/DD/<uuid>/<original_filename>
+    """
+    today = timezone.now()
+    return os.path.join(
+        'markdown_images',
+        str(today.year),
+        f"{today.month:02}",
+        f"{today.day:02}",
+        str(instance.pk),
+        filename
+    )

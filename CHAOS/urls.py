@@ -24,4 +24,5 @@ urlpatterns = [
     path('chat/', include('chaos_chat.urls')),
     path('assistent/' , include('chaos_assistent.urls')),
     path('organizer/' , include('chaos_organizer.urls')),
+    path('documents/', include('chaos_documents.urls')),
 ]

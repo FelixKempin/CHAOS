@@ -1,10 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+{# templates/calendar/appointment_confirm_delete.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-light">Termin löschen</h2>
+  <p>Möchten Sie den Termin "<strong>{{ object.title }}</strong>" wirklich dauerhaft löschen?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger me-2" type="submit">Ja, löschen</button>
+    <a href="{% url 'calendar:calendar' %}" class="btn btn-outline-secondary">Abbrechen</a>
+  </form>
+</div>
+{% endblock %}

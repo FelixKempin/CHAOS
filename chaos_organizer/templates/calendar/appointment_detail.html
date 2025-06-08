@@ -1,24 +1,28 @@
+{# templates/calendar/appointment_detail.html #}
 {% extends "base.html" %}
-{% load tz static %}
-
-{% block extra_head %}
-  <link href="{% static 'css/base_style.css' %}" rel="stylesheet">
-{% endblock %}
+{% load tz %}
 
 {% block content %}
-<div class="container">
-  <h2>Termin: {{ appt.title }}</h2>
+<div class="container mt-4">
+  <h2 class="text-light">Termin: {{ appt.title }}</h2>
   <p><strong>Beschreibung:</strong> {{ appt.description }}</p>
   <p><strong>Beginn:</strong> {{ appt.begin|date:"d.m.Y H:i" }}</p>
   <p><strong>Ende:</strong> {{ appt.end|date:"d.m.Y H:i" }}</p>
   <p><strong>Priorität:</strong> {{ appt.get_priority_display }}</p>
   <p><strong>Wiederholung:</strong> {{ appt.frequency }} alle {{ appt.interval }}{% if appt.by_weekday %} ({{ appt.by_weekday }}){% endif %}{% if appt.end_date %} bis {{ appt.end_date }}{% endif %}</p>
+
   <h4>Nächste Vorkommen:</h4>
-  <ul>
+  <ul class="list-group mb-3">
     {% for occ in appt.get_occurrences|slice:":5" %}
-      <li>{{ occ|date:"d.m.Y H:i" }}</li>
+      <li class="list-group-item list-group-item-dark">{{ occ|date:"d.m.Y H:i" }}</li>
     {% endfor %}
   </ul>
-  <a href="{% url 'calendar:appointment_add' %}" class="btn btn-outline-primary">Neuen Termin</a>
+
+  <a href="{% url 'calendar:appointment_update' appt.pk %}" class="btn btn-primary me-2">
+    Bearbeiten
+  </a>
+  <a href="{% url 'calendar:appointment_delete' appt.pk %}" class="btn btn-outline-danger">
+    Löschen
+  </a>
 </div>
 {% endblock %}

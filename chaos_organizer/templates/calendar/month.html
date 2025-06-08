@@ -1,93 +1,99 @@
+{# templates/calendar/month.html #}
 {% extends "base.html" %}
 {% load tz static %}
 
 {% block extra_head %}
-  <link href="{% static 'css/base_style.css' %}" rel="stylesheet">
+  {# Wenn du noch spezielle CSS-Klassen brauchst, kannst du sie hier einbinden. #}
   <style>
-    .calendar-table { width:100%; border-collapse:collapse; }
-    .calendar-table th, .calendar-table td {
-      border:1px solid #444; vertical-align:top; padding:0.4rem;
+    /* Damit Tage außerhalb des aktuellen Monats ausgegraut werden */
+    .other-month {
+      opacity: 0.3;
     }
-    .other-month { opacity:0.3; }
-    .event-badge { display:block; margin:0.2rem 0; }
+    /* Badges in Dunkelmodus (werden größtenteils durch base_style.css abgedeckt) */
+    .event-badge {
+      display: block;
+      margin: 0.2rem 0;
+    }
   </style>
 {% endblock %}
 
 {% block content %}
-  <div class="container">
+<div class="container mt-4">
+  {# Create‐Buttons #}
+  <div class="mb-3">
+    <a href="{% url 'calendar:appointment_add' %}?date={{ date|date:'Y-m-d' }}T00:00&view=month&year={{ date.year }}&month={{ date.month }}&type={{ filter_type }}"
+       class="btn btn-sm btn-success me-2">
+      <i class="bi bi-plus-circle me-1"></i> Neuer Termin
+    </a>
+    <a href="{% url 'calendar:todo_add' %}?date={{ date|date:'Y-m-d' }}T00:00&view=month&year={{ date.year }}&month={{ date.month }}&type={{ filter_type }}"
+       class="btn btn-sm btn-success">
+      <i class="bi bi-plus-circle me-1"></i> Neues To-Do
+    </a>
+  </div>
 
-    {# Create-Buttons #}
-    <div class="mb-3">
-      <a href="{% url 'calendar:appointment_add' %}?date={{ date|date:"Y-m-d" }}T00:00&view=month&year={{ date.year }}&month={{ date.month }}&type={{ filter_type }}"
-         class="btn btn-sm btn-success me-2">
-        Neuer Termin
+  {# View‐Pills #}
+  <ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+      <a class="nav-link {% if view == 'day'   %}active{% endif %}"
+         href="?view=day&year={{ date.year }}&month={{ date.month }}&day={{ date.day }}&type={{ filter_type }}">
+        Tag
       </a>
-      <a href="{% url 'calendar:todo_add' %}?date={{ date|date:"Y-m-d" }}T00:00&view=month&year={{ date.year }}&month={{ date.month }}&type={{ filter_type }}"
-         class="btn btn-sm btn-success">
-        Neues To-Do
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if view == 'week'  %}active{% endif %}"
+         href="?view=week&year={{ date.year }}&week={{ date.isocalendar.1 }}&type={{ filter_type }}">
+        Woche
       </a>
-    </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if view == 'month' %}active{% endif %}"
+         href="?view=month&year={{ date.year }}&month={{ date.month }}&type={{ filter_type }}">
+        Monat
+      </a>
+    </li>
+  </ul>
 
-    {# View-Pills #}
-    <ul class="nav nav-pills mb-3">
-      <li class="nav-item">
-        <a class="nav-link {% if view == 'day'   %}active{% endif %}"
-           href="?view=day&year={{ date.year }}&month={{ date.month }}&day={{ date.day }}&type={{ filter_type }}">
-          Tag
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if view == 'week'  %}active{% endif %}"
-           href="?view=week&year={{ date.year }}&week={{ date.isocalendar.1 }}&type={{ filter_type }}">
-          Woche
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if view == 'month' %}active{% endif %}"
-           href="?view=month&year={{ date.year }}&month={{ date.month }}&type={{ filter_type }}">
-          Monat
-        </a>
-      </li>
-    </ul>
+  {# Filter #}
+  <form method="get" class="d-inline-block mb-4">
+    <input type="hidden" name="view"  value="{{ view }}">
+    <input type="hidden" name="year"  value="{{ date.year }}">
+    <input type="hidden" name="month" value="{{ date.month }}">
+    <label for="typeSelect" class="form-label me-2">Zeige:</label>
+    <select id="typeSelect" name="type"
+            class="form-select form-select-sm d-inline-block w-auto"
+            onchange="this.form.submit()">
+      <option value="all"  {% if filter_type == 'all'  %}selected{% endif %}>Alle</option>
+      <option value="appt" {% if filter_type == 'appt' %}selected{% endif %}>Termine</option>
+      <option value="todo" {% if filter_type == 'todo' %}selected{% endif %}>To-Dos</option>
+    </select>
+  </form>
 
-    {# Filter #}
-    <form method="get" class="d-inline-block mb-4">
-      <input type="hidden" name="view"  value="{{ view }}">
-      <input type="hidden" name="year"  value="{{ date.year }}">
-      <input type="hidden" name="month" value="{{ date.month }}">
-      <label for="typeSelect" class="form-label me-2">Zeige:</label>
-      <select id="typeSelect" name="type"
-              class="form-select form-select-sm d-inline-block w-auto"
-              onchange="this.form.submit()">
-        <option value="all"  {% if filter_type == 'all'  %}selected{% endif %}>Alle</option>
-        <option value="appt" {% if filter_type == 'appt' %}selected{% endif %}>Termine</option>
-        <option value="todo" {% if filter_type == 'todo' %}selected{% endif %}>To-Dos</option>
-      </select>
-    </form>
+  <h2 class="text-center mb-3">Monat: {{ date|date:"F Y" }}</h2>
 
-    <h2>Monat: {{ date|date:"F Y" }}</h2>
-
-    <table class="calendar-table table-dark">
-      <thead>
-        <tr class="table-secondary text-center">
-          <th>Mo</th><th>Di</th><th>Mi</th><th>Do</th>
-          <th>Fr</th><th>Sa</th><th>So</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for week in weeks %}
-          <tr>
-            {% for cell in week %}
-              <td class="{% if cell.day.month != date.month %}other-month{% endif %}">
-                <div>
-                  <a href="?view=day&year={{ cell.day.year }}
-                          &month={{ cell.day.month }}
-                          &day={{ cell.day.day }}
-                          &type={{ filter_type }}">
-                    <strong>{{ cell.day.day }}</strong>
-                  </a>
-                </div>
-                {% for ev in cell.events %}
+  <table class="table table-dark table-bordered">
+    <thead>
+      <tr class="text-center">
+        <th>Mo</th><th>Di</th><th>Mi</th><th>Do</th>
+        <th>Fr</th><th>Sa</th><th>So</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for cell in week %}
+            <td class="{% if cell.day.month != date.month %}other-month{% endif %}">
+              <div>
+                <a href="?view=day&year={{ cell.day.year }}
+                        &month={{ cell.day.month }}
+                        &day={{ cell.day.day }}
+                        &type={{ filter_type }}"
+                   class="text-decoration-none text-light">
+                  <strong>{{ cell.day.day }}</strong>
+                </a>
+              </div>
+              {% for ev in cell.events %}
+                <div class="d-flex justify-content-between align-items-center my-1">
+                  {# Event‐Badge (Primär: Termin in violett, Sekundär: ToDo in orange, Wiederholung gelb) #}
                   <span class="badge event-badge
                         {% if ev.recurring %}bg-warning
                         {% elif ev.type == 'appt' %}bg-primary
@@ -95,14 +101,38 @@
                     {% if ev.recurring %}🔁 {% endif %}
                     {{ ev.dt|time:"H:i" }} {{ ev.item.title }}
                   </span>
-                {% empty %}
-                  <br>
-                {% endfor %}
-              </td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+                  <div>
+                    {% if ev.type == 'appt' %}
+                      <a href="{% url 'calendar:appointment_detail' ev.item.pk %}" class="text-light me-1">
+                        <i class="bi bi-eye-fill"></i>
+                      </a>
+                      <a href="{% url 'calendar:appointment_update' ev.item.pk %}" class="text-light me-1">
+                        <i class="bi bi-pencil-fill"></i>
+                      </a>
+                      <a href="{% url 'calendar:appointment_delete' ev.item.pk %}" class="text-light">
+                        <i class="bi bi-trash-fill"></i>
+                      </a>
+                    {% else %}
+                      <a href="{% url 'calendar:todo_detail' ev.item.pk %}" class="text-light me-1">
+                        <i class="bi bi-eye-fill"></i>
+                      </a>
+                      <a href="{% url 'calendar:todo_update' ev.item.pk %}" class="text-light me-1">
+                        <i class="bi bi-pencil-fill"></i>
+                      </a>
+                      <a href="{% url 'calendar:todo_delete' ev.item.pk %}" class="text-light">
+                        <i class="bi bi-trash-fill"></i>
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              {% empty %}
+                <br>
+              {% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

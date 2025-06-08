@@ -1,13 +1,9 @@
+{# templates/calendar/todo_detail.html #}
 {% extends "base.html" %}
-{% load tz static %}
-
-{% block extra_head %}
-  <link href="{% static 'css/base_style.css' %}" rel="stylesheet">
-{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h2>To-Do: {{ todo.title }}</h2>
+<div class="container mt-4">
+  <h2 class="text-light">To-Do: {{ todo.title }}</h2>
   <p><strong>Beschreibung:</strong> {{ todo.description }}</p>
   <p><strong>Deadline:</strong> {{ todo.deadline|date:"d.m.Y H:i" }}</p>
   <p><strong>Priorität:</strong> {{ todo.get_priority_display }}</p>
@@ -19,14 +15,21 @@
     {% endfor %}
   </p>
   <p><strong>Wiederholung:</strong> {{ todo.frequency }} alle {{ todo.interval }}{% if todo.by_weekday %} ({{ todo.by_weekday }}){% endif %}{% if todo.end_date %} bis {{ todo.end_date }}{% endif %}</p>
+
   <h4>Nächste Vorkommen:</h4>
-  <ul>
+  <ul class="list-group mb-3">
     {% for occ in todo.get_occurrences|slice:":5" %}
-      <li>{{ occ|date:"d.m.Y H:i" }}</li>
+      <li class="list-group-item list-group-item-dark">{{ occ|date:"d.m.Y H:i" }}</li>
     {% empty %}
-      <li>keine Wiederholung</li>
+      <li class="list-group-item list-group-item-dark">Keine Wiederholung</li>
     {% endfor %}
   </ul>
-  <a href="{% url 'calendar:todo_add' %}" class="btn btn-outline-primary">Neues To-Do</a>
+
+  <a href="{% url 'calendar:todo_update' todo.pk %}" class="btn btn-primary me-2">
+    Bearbeiten
+  </a>
+  <a href="{% url 'calendar:todo_delete' todo.pk %}" class="btn btn-outline-danger">
+    Löschen
+  </a>
 </div>
 {% endblock %}

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 import dj_database_url
-from celery.schedules import crontab
+from celery.schedules import crontab, schedule
 from dotenv import load_dotenv
 from google.oauth2 import service_account
 
@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'chaos_information',
     'chaos_organizer',
     'chaos_assistent',
+    'chaos_routine'
 
 ]
 
@@ -232,18 +233,23 @@ LOGGING = {
         },
     },
 }
-
 """
 CELERY_BEAT_SCHEDULE = {
-    # jede 5 Minuten alle neuen Informationen evaluieren
-    'evaluate-informations-every-5-minutes': {
-        'task': '',
-        'schedule': crontab(minute='*/5'),
+    'evaluate-new-information-every-5s': {
+        'task': 'chaos_routine.tasks.evaluate_new_information',
+        'schedule': schedule(5.0),  # Alle 5 Sekunden
     },
-    # jede Minute alle AgentActions ausführen
-    'process-agent-actions-every-minute': {
-        'task': '',
-        'schedule': crontab(),  # default: jede Minute
+ 
+    'rescan-relevance-information-every-hour': {
+        'task': 'chaos_routine.tasks.rescan_relevance_information',
+        'schedule': crontab(minute=0),  # Jede volle Stunde
     },
+  
 }
 """
+CELERY_BEAT_SCHEDULE = {
+    'evaluate-new-information-every-5s': {
+        'task': 'chaos_routine.tasks.evaluate_new_information',
+        'schedule': schedule(5.0),  # Alle 5 Sekunden
+    },
+}

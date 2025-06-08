@@ -1,27 +1,51 @@
+{# templates/calendar/week.html #}
 {% extends "base.html" %}
-{% load tz static %}
-
-{% block extra_head %}
-  <link href="{% static 'css/base_style.css' %}" rel="stylesheet">
-{% endblock %}
+{% load tz %}
 
 {% block content %}
+  {# Navigation (View-Pills + Filter) aus _nav.html #}
   {% include "calendar/_nav.html" %}
-  <h2>Woche {{ date.isocalendar.1 }} ab {{ date|date:"d.m.Y" }}</h2>
-  <ul class="list-group">
-    {% for ev in events %}
-      <li class="list-group-item d-flex justify-content-between align-items-center
-                 {% if ev.recurring %}list-group-item-warning{% endif %}">
-        <div>
-          <strong>{{ ev.dt|date:"D d.m" }} {{ ev.dt|time:"H:i" }}</strong>
-          {% if ev.recurring %}🔁{% endif %} – {{ ev.item.title }}
-        </div>
-        <span class="badge {% if ev.type == 'appt' %}bg-primary{% else %}bg-secondary{% endif %}">
-          {{ ev.type|upper }}
-        </span>
-      </li>
-    {% empty %}
-      <li class="list-group-item">Keine Einträge.</li>
-    {% endfor %}
-  </ul>
+
+  <div class="container mt-4">
+    <h2 class="text-light">Woche {{ date.isocalendar.1 }} ab {{ date|date:"d.m.Y" }}</h2>
+
+    <ul class="list-group mb-3">
+      {% for ev in events %}
+        <li class="list-group-item list-group-item-dark d-flex justify-content-between align-items-center
+                   {% if ev.recurring %}list-group-item-warning{% endif %}">
+          <div>
+            <strong class="text-light">{{ ev.dt|date:"D d.m" }} {{ ev.dt|time:"H:i" }}</strong>
+            {% if ev.recurring %}🔁{% endif %} – <span class="text-light">{{ ev.item.title }}</span>
+          </div>
+          <div>
+            {% if ev.type == 'appt' %}
+              <a href="{% url 'calendar:appointment_detail' ev.item.pk %}" class="text-light me-1">
+                <i class="bi bi-eye-fill"></i>
+              </a>
+              <a href="{% url 'calendar:appointment_update' ev.item.pk %}" class="text-light me-1">
+                <i class="bi bi-pencil-fill"></i>
+              </a>
+              <a href="{% url 'calendar:appointment_delete' ev.item.pk %}" class="text-light">
+                <i class="bi bi-trash-fill"></i>
+              </a>
+            {% else %}
+              <a href="{% url 'calendar:todo_detail' ev.item.pk %}" class="text-light me-1">
+                <i class="bi bi-eye-fill"></i>
+              </a>
+              <a href="{% url 'calendar:todo_update' ev.item.pk %}" class="text-light me-1">
+                <i class="bi bi-pencil-fill"></i>
+              </a>
+              <a href="{% url 'calendar:todo_delete' ev.item.pk %}" class="text-light">
+                <i class="bi bi-trash-fill"></i>
+              </a>
+            {% endif %}
+          </div>
+        </li>
+      {% empty %}
+        <li class="list-group-item list-group-item-dark text-light">
+          Keine Einträge.
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 {% endblock %}

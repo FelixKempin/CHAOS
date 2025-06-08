@@ -6,7 +6,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
 
-from .models import Information, Tag, TextInput
+from .models import Information, Tag, TextInput, RelevanceEvent
 from .tasks import (
     update_information_embedding_task,
     handle_information_creation_task,
@@ -17,9 +17,9 @@ from chaos_embeddings.services.embedding_service import generate_embedding
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
-# Initialize OpenAI client once
+
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
-# --- Information ↔ Embedding cleanup ---
+
 
 @receiver(post_delete, sender=Information)
 def delete_embedding_and_source(sender, instance, **kwargs):
@@ -27,6 +27,7 @@ def delete_embedding_and_source(sender, instance, **kwargs):
     Wenn eine Information gelöscht wird:
     1) lösche das zugehörige Embedding
     2) lösche das Quell-Objekt (Dokument, TextInput, etc.)
+    3) lösche alle RelevanceEvents zu dieser Information
     """
     # 1) Embedding entfernen
     ct_info = ContentType.objects.get_for_model(Information)
@@ -39,8 +40,14 @@ def delete_embedding_and_source(sender, instance, **kwargs):
     # 2) Quell-Objekt löschen
     try:
         src = instance.content_object
-        # content_object ist None, wenn das Original schon weg ist
         if src:
+            # Wenn Dokument: Datei vor dem Löschen entfernen!
+            if hasattr(src, 'file') and src.file:
+                logger.warning(f"Lösche Datei aus Storage direkt: {src.file.name}")
+                try:
+                    src.file.delete(save=False)
+                except Exception as e:
+                    logger.error(f"Fehler beim Löschen der Datei: {e}", exc_info=True)
             src.delete()
             logger.debug(
                 f"Deleted source object "
@@ -52,6 +59,11 @@ def delete_embedding_and_source(sender, instance, **kwargs):
             f"{instance.content_type.model} (pk={instance.object_id})"
         )
 
+    # 3) RelevanceEvents löschen
+    relevance_events_deleted, _ = RelevanceEvent.objects.filter(
+        information=instance
+    ).delete()
+    logger.debug(f"Deleted {relevance_events_deleted} RelevanceEvent(s) for Information {instance.pk}")
 @receiver(post_save, sender=Information)
 def on_information_saved(sender, instance, created, update_fields, **kwargs):
     # 3) Beim Update relevanter Felder: nur das Embedding neu berechnen
@@ -64,7 +76,6 @@ def on_information_saved(sender, instance, created, update_fields, **kwargs):
             )
         )
 
-# --- Tag: Beschreibung und Embedding erzeugen ---
 @receiver(post_save, sender=Tag)
 def ensure_description_and_embedding(sender, instance: Tag, created, **kwargs):
     """
@@ -101,9 +112,6 @@ def ensure_description_and_embedding(sender, instance: Tag, created, **kwargs):
     if updated:
         Tag.objects.filter(pk=instance.pk).update(**updated)
 
-# --- TextInput → Information Creation ---
-
-# --- TextInput → Information Creation ---
 @receiver(post_save, sender=TextInput)
 def handle_text_input_save(sender, instance: TextInput, created, **kwargs):
     """

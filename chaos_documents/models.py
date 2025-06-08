@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 
 from . import tasks
 from .services.storage_backends import DocumentMediaStorage
-from .utils import document_upload_to
+from .utils import document_upload_to, markdown_image_upload_to
 from chaos_information.models import Information
 
 
@@ -42,6 +42,13 @@ class TEXT_Document(Document):
 
 class MARKDOWN_Document(Document):
     file             = models.FileField (upload_to=document_upload_to,storage=DocumentMediaStorage(), blank=True, null=True)
+    # temporäres Feld zum Speichern einzelner Upload-Bilder
+    markdown_image = models.ImageField(
+        upload_to=markdown_image_upload_to,
+        storage=DocumentMediaStorage(),
+        blank=True,
+        null=True
+    )
 
 
 class AUDIO_Document(Document):

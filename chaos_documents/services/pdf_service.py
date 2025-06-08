@@ -14,7 +14,7 @@ def correct_ocr_with_gpt(text: str) -> str:
         return ""
     try:
         resp = client.chat.completions.create(
-            model=settings.OPEN_AI_MODEL_CLASSIFY,
+            model=settings.OPEN_AI_MODEL_TEXT,
             messages=[
                 {"role":"system","content":(
                     "Korrigiere folgenden gescannten Text aus einem Dokument: "
