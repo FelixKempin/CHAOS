@@ -29,6 +29,12 @@
     <!-- Eingabe-Formular -->
     <form method="post" enctype="multipart/form-data" class="chat-input">
       {% csrf_token %}
+      <!-- Vault Auswahl -->
+<div class="mb-2">
+  <label for="{{ form.vault.id_for_label }}" class="form-label text-light">Vault (optional)</label>
+  {{ form.vault }}
+</div>
+
       <div class="input-group">
         {{ form.text|add_class:"form-control bg-light text-dark" }}
         <button class="btn btn-primary" type="submit">Senden</button>

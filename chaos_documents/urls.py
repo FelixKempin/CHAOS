@@ -4,7 +4,7 @@ from .views import (
     MarkdownDocumentListView,
     MarkdownDocumentDetailView,
     MarkdownDocumentCreateView,
-    MarkdownDocumentUpdateView, MarkdownImageUploadView,
+    MarkdownDocumentUpdateView, MarkdownImageUploadView, MarkdownDocumentDeleteView,
 )
 
 urlpatterns = [
@@ -13,4 +13,5 @@ urlpatterns = [
     path('markdown/<uuid:pk>/', MarkdownDocumentDetailView.as_view(), name='markdown_document_detail'),
     path('markdown/<uuid:pk>/edit/', MarkdownDocumentUpdateView.as_view(), name='markdown_document_edit'),
     path('api/markdown/<uuid:pk>/upload-image/', MarkdownImageUploadView.as_view(), name='md_image_upload'),
+    path('markdown/<uuid:pk>/delete/', MarkdownDocumentDeleteView.as_view(), name='markdown_document_delete'),
 ]

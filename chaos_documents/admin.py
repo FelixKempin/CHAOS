@@ -6,7 +6,8 @@ from .models import (
     CSV_Document,
     TEXT_Document,
     MARKDOWN_Document,
-    AUDIO_Document,
+    AUDIO_Document, EmbeddedAsset,
+
 
 )
 
@@ -18,6 +19,7 @@ models_to_register = [
     TEXT_Document,
     MARKDOWN_Document,
     AUDIO_Document,
+    EmbeddedAsset
 ]
 
 for model in models_to_register:

@@ -1,10 +1,15 @@
 # chaos_documents/views.py
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
+from urllib.parse import unquote, urlparse
+
+from django.shortcuts import get_object_or_404
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, View, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse
 from django.core.files.base import ContentFile
-from .models import MARKDOWN_Document
+from .models import MARKDOWN_Document, EmbeddedAsset
 from .forms import MarkdownDocumentForm
+from .services.storage_backends import DocumentMediaStorage
+
 
 class MarkdownDocumentListView(ListView):
     model = MARKDOWN_Document
@@ -16,6 +21,12 @@ class MarkdownDocumentDetailView(DetailView):
     model = MARKDOWN_Document
     template_name = 'markdown_document_detail.html'
     context_object_name = 'markdown_doc'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['embedded_assets'] = self.object.embedded_assets.all()
+        return ctx
+
 
 class MarkdownDocumentCreateView(CreateView):
     model = MARKDOWN_Document
@@ -41,6 +52,7 @@ class MarkdownDocumentCreateView(CreateView):
             save=True
         )
         return super().form_valid(form)
+
 class MarkdownDocumentUpdateView(UpdateView):
     model = MARKDOWN_Document
     form_class = MarkdownDocumentForm
@@ -49,41 +61,63 @@ class MarkdownDocumentUpdateView(UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # initialer Datei-Inhalt
+
+        # initialer Datei-Inhalt laden
         data = ''
         if self.object.file:
             data = self.object.file.open('rb').read().decode('utf-8')
         ctx['initial_markdown'] = data
-        # Upload-URL aus reverse()
+
+        # Upload-URL
         ctx['upload_url'] = reverse('md_image_upload', kwargs={'pk': self.object.pk})
+
+        # Embedded Assets hinzufügen
+        ctx['embedded_assets'] = self.object.embedded_assets.all()
+
         return ctx
 
     def form_valid(self, form):
-        # wie gehabt
         self.object = form.save(commit=False)
         self.object.save()
+
         content = self.request.POST.get('file_content', '')
         self.object.file.save(
             f'{self.object.pk}.md',
             ContentFile(content.encode('utf-8')),
             save=True
         )
-        return super().form_valid(form)
 
+        # Optional: Nach jedem Speichern Assets aus dem Markdown-Text neu parsen
+        # (falls manuelle Links etc. enthalten sind)
+        self.object.parse_and_attach_assets()
+
+        return super().form_valid(form)
 
 class MarkdownImageUploadView(View):
     """
-    Speichert ein einzelnes Bild zum Markdown-Objekt und liefert die URL zurück.
+    Speichert Drag&Drop-Uploads direkt als EmbeddedAsset.
     """
     def post(self, request, pk):
-        try:
-            doc = MARKDOWN_Document.objects.get(pk=pk)
-        except MARKDOWN_Document.DoesNotExist:
-            return JsonResponse({'error': 'Nicht gefunden'}, status=404)
-
-        img = request.FILES.get('file')
-        if not img:
+        doc = get_object_or_404(MARKDOWN_Document, pk=pk)
+        upload = request.FILES.get('file')
+        if not upload:
             return JsonResponse({'error': 'Kein File'}, status=400)
 
-        doc.markdown_image.save(img.name, img, save=True)
-        return JsonResponse({'url': doc.markdown_image.url})
+        # Nutze das Dokument-UUID-Prefix für alle Dateien
+        obj_name = f"markdown_docs/{doc.id}/{upload.name}"
+
+        # Lege das Asset mit file an
+        asset = EmbeddedAsset.objects.create(
+            object_name=obj_name
+        )
+        asset.file.save(obj_name, upload, save=True)
+
+        doc.embedded_assets.add(asset)
+
+        return JsonResponse({'url': asset.file.url})
+
+class MarkdownDocumentDeleteView(DeleteView):
+    model = MARKDOWN_Document
+    template_name = 'markdown_document_confirm_delete.html'
+    success_url = reverse_lazy('markdown_document_list')
+

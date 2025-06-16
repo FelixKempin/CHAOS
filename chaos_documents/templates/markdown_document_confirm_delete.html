@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+  <h1 class="mb-4">Markdown-Dokument löschen</h1>
+  <p>Möchtest du das Dokument „{{ object.name }}“ wirklich löschen? Alle eingebetteten Bilder werden entfernt.</p>
+  <form method="post" class="d-flex">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger me-2">Ja, löschen</button>
+    <a href="{% url 'markdown_document_detail' object.pk %}" class="btn btn-outline-secondary">Abbrechen</a>
+  </form>
+{% endblock %}

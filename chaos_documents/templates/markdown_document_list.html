@@ -1,16 +1,24 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-  <h1>Markdown-Dokumente</h1>
+  <h1 class="mb-4">Markdown-Dokumente</h1>
   <a href="{% url 'markdown_document_add' %}" class="btn btn-success mb-3">
     Neues Dokument
   </a>
   <ul class="list-group">
     {% for doc in markdown_docs %}
       <li class="list-group-item d-flex justify-content-between align-items-center">
-        <a href="{% url 'markdown_document_detail' doc.pk %}">
-          {{ doc.name|default:doc.pk }}
-        </a>
-        <small>{{ doc.date|date:"d.m.Y H:i" }}</small>
+        <div>
+          <a href="{% url 'markdown_document_detail' doc.pk %}">
+            {{ doc.name|default:doc.pk }}
+          </a>
+          <small class="text-muted ms-2">{{ doc.date|date:"d.m.Y H:i" }}</small>
+        </div>
+        <div>
+          <a href="{% url 'markdown_document_edit' doc.pk %}" class="btn btn-sm btn-primary me-1">Bearbeiten</a>
+          <a href="{% url 'markdown_document_delete' doc.pk %}" class="btn btn-sm btn-outline-danger">Löschen</a>
+        </div>
       </li>
     {% empty %}
       <li class="list-group-item">Keine Dokumente vorhanden.</li>
@@ -19,7 +27,7 @@
 
   {% if is_paginated %}
     <nav aria-label="Seiten">
-      <ul class="pagination mt-3">
+      <ul class="pagination mt-3 justify-content-center">
         {% if page_obj.has_previous %}
           <li class="page-item">
             <a class="page-link" href="?page={{ page_obj.previous_page_number }}">« Zurück</a>

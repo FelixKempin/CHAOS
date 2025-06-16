@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static widget_tweaks %}
+{% load static widget_tweaks markdown_tags %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'css/base_style.css' %}">
@@ -109,9 +110,16 @@
           {% elif model == "img_document" %}
             <p><strong>Bild:</strong></p>
             <img src="{{ obj.file.url }}" alt="Bild" class="img-fluid border mb-3">
-          {% elif model in "text_document markdown_document csv_document" %}
+          {% elif model == "markdown_document" %}
+            <p><strong>Markdown-Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
+            <div class="border rounded p-3 bg-white">
+              {{ obj.file|render_markdown }}
+            </div>
+
+          {% elif model in "text_document csv_document" %}
             <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
             <pre class="bg-dark p-3 border rounded text-wrap">{{ obj.file.read|default:"(Inhalt kann nicht angezeigt werden)" }}</pre>
+
           {% elif model == "audio_document" %}
             <p><strong>Audio:</strong></p>
             <audio controls src="{{ obj.file.url }}" class="w-100">Dein Browser unterstützt kein Audio.</audio>

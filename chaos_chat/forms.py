@@ -1,7 +1,17 @@
+from chaos_information.models import Vault  # ggf. anpassen, je nach Projektstruktur
 from django import forms
 
 
 class ChatForm(forms.Form):
+    vault = forms.ModelChoiceField(
+        queryset=Vault.objects.filter(active=True),
+        required=False,
+        label="Vault",
+        widget=forms.Select(attrs={
+            "class": "form-select"
+        })
+    )
+
     text = forms.CharField(
         label="Nachricht",
         widget=forms.Textarea(attrs={
@@ -11,7 +21,9 @@ class ChatForm(forms.Form):
         }),
         required=False
     )
+
     file = forms.FileField(label="Datei", required=False)
+
     image = forms.ImageField(
         label="Bild",
         required=False,

@@ -9,6 +9,9 @@ from chaos_information.services.information_service import create_information
 from chaos_documents.services.img_service import extract_text_from_image
 from chaos_documents.services.txt_service import extract_text_from_txt
 
+
+from chaos_documents.services.markdown_service import md_to_text
+
 logger = logging.getLogger("document_agent_app")
 
 def create_information_for_pdf_doc(doc):
@@ -112,3 +115,32 @@ def create_information_for_img_doc(doc):
         meta_tx = doc.meta_description
 
     return create_information(doc, meta_tx, full_text)
+
+
+def create_information_for_markdown_doc(doc, raw=None):
+    if raw is None:
+        try:
+            raw = doc.file.open("rb").read().decode("utf-8")
+        except Exception as e:
+            logger.exception(f"[create_info_md] Fehler beim Einlesen von {doc.pk}: {e}")
+            return None
+
+    parts = []
+    if doc.meta_description:
+        parts.append(f"User-Text: {doc.meta_description}")
+
+    try:
+        plain = md_to_text(raw)
+        if plain:
+            parts.append(plain)
+        else:
+            logger.warning(f"[create_info_md] Kein Klartext aus Markdown für {doc.pk}")
+    except Exception as e:
+        logger.exception(f"[create_info_md] Regex-Stripper gescheitert für {doc.pk}: {e}")
+
+    full = "\n\n".join(parts).strip()
+    if not full:
+        logger.error(f"[create_info_md] Kein Inhalt zum Erstellen der Information bei {doc.pk}")
+        return None
+
+    return create_information(doc, doc.meta_description or "", full)

@@ -37,8 +37,6 @@ from chaos_documents.models import (
     MARKDOWN_Document, IMG_Document
 )
 
-
-
 @require_GET
 def search_neighbors(request):
     q = request.GET.get("q", "").strip()
@@ -218,6 +216,7 @@ class InformationUpdateView(UpdateView):
         valid_pks = [pk for pk in tag_pks if pk.isdigit()]
         self.object.tags.set(valid_pks)
         return response
+
     def get_related_infos(self):
         cache_key = f"related_infos_{self.object.pk}"
         cached = cache.get(cache_key)

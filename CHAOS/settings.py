@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'dal',
     'dal_select2',
     'pgvector',
+    'markdownx',
     # CHAOS APPS
     'chaos_core',
     'chaos_chat',

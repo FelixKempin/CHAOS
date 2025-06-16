@@ -1,28 +1,48 @@
 {% extends "base.html" %}
+{% load static %}
 {% load file_to_text %}
 
 {% block content %}
-  <h1>{{ markdown_doc.name|default:"(kein Name)" }}</h1>
-  <p class="text-muted">{{ markdown_doc.meta_description }}</p>
-  <p><small>Erstellt: {{ markdown_doc.date|date:"d.m.Y H:i" }}</small></p>
+  <h1 class="mb-3">{{ markdown_doc.name|default:"(kein Name)" }}</h1>
+  <p class="text-muted mb-1">{{ markdown_doc.meta_description }}</p>
+  <p><small class="text-muted">Erstellt: {{ markdown_doc.date|date:"d.m.Y H:i" }}</small></p>
 
   {% if markdown_doc.file %}
-    <div class="card p-3 mb-3">
-      <div class="toastui-editor-preview markdown-body">
-        {{ markdown_doc.file|file_to_text|safe }}
-      </div>
+    <div class="card p-3 mb-3 markdown-body">
+      {{ markdown_doc.file|file_to_text|safe }}
     </div>
-    <a href="{{ markdown_doc.file.url }}" download class="btn btn-outline-secondary">
-      Original herunterladen
-    </a>
+
+    {% if embedded_assets %}
+      <h5 class="mt-4">Eingebettete Bilder</h5>
+      <div class="row">
+        {% for asset in embedded_assets %}
+          <div class="col-md-4 mb-3">
+            <div class="card">
+              <img src="{{ asset.file.url }}" class="card-img-top" alt="{{ asset.object_name }}">
+              <div class="card-body p-2">
+                <small class="text-muted">{{ asset.object_name }}</small>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="mb-3 mt-4">
+      <a href="{{ markdown_doc.file.url }}" download class="btn btn-outline-secondary me-2">
+        Original herunterladen
+      </a>
+      <a href="{% url 'markdown_document_edit' markdown_doc.pk %}" class="btn btn-primary me-2">
+        Bearbeiten
+      </a>
+      <a href="{% url 'markdown_document_delete' markdown_doc.pk %}" class="btn btn-outline-danger">
+        Löschen
+      </a>
+      <a href="{% url 'markdown_document_list' %}" class="btn btn-outline-light ms-auto">
+        Zur Liste
+      </a>
+    </div>
   {% else %}
     <p>Kein Inhalt verfügbar.</p>
   {% endif %}
-
-  <a href="{% url 'markdown_document_edit' markdown_doc.pk %}" class="btn btn-primary">
-    Bearbeiten
-  </a>
-  <a href="{% url 'markdown_document_list' %}" class="btn btn-outline-secondary">
-    Zurück zur Liste
-  </a>
 {% endblock %}

@@ -2,7 +2,7 @@ from celery import shared_task
 from .services.information_service import (
     create_information_for_pdf_doc,
     create_information_for_text_doc,
-    create_information_for_img_doc, logger,
+    create_information_for_img_doc, logger, create_information_for_markdown_doc,
 )
 
 # PDF-Task mit Retry-Logik
@@ -53,3 +53,19 @@ def task_create_info_for_img(self, doc_pk):
         logger.exception(f"[task_create_info_for_img] Fehler für Bild-Dokument {doc_pk}: {e}")
         raise self.retry(exc=e)
 
+
+
+# --- Celery-Task mit Retry-Logik für Markdown ---
+@shared_task(bind=True, default_retry_delay=10, max_retries=5)
+def task_create_info_for_markdown(self, doc_pk):
+    logger.info(f"[task_create_info_for_markdown] Task gestartet für MD {doc_pk}")
+    try:
+        # erst das Model laden
+        from .models import MARKDOWN_Document
+        doc = MARKDOWN_Document.objects.get(pk=doc_pk)
+        logger.info(f"[task_create_info_for_markdown] Datei gefunden – starte Verarbeitung für {doc.pk}")
+        return create_information_for_markdown_doc(doc)
+    except Exception as e:
+        logger.exception(f"[task_create_info_for_markdown] Fehler für MD {doc_pk}: {e}")
+        # sofern es kein MaxRetriesExceededError war, retry
+        raise

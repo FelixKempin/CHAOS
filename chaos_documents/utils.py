@@ -17,8 +17,6 @@ def document_upload_to(instance, filename):
     name = f"{uuid.uuid4()}{ext}"
     return f"{now.year}/{now.month:02}/{now.day:02}/{model}/{name}"
 
-
-
 def get_temp_file_from_django_file(django_file_field, suffix=""):
     """
     Speichert eine Django FileField-Datei temporär lokal ab
@@ -32,8 +30,6 @@ def get_temp_file_from_django_file(django_file_field, suffix=""):
     except Exception as e:
         logger.error(f"Fehler beim Speichern der temporären Datei: {e}")
         raise
-
-
 
 def markdown_image_upload_to(instance, filename):
     """
@@ -49,3 +45,15 @@ def markdown_image_upload_to(instance, filename):
         str(instance.pk),
         filename
     )
+
+import markdown
+from django.utils.safestring import mark_safe
+
+def render_markdown_file(file_field):
+    if not file_field:
+        return "(Datei fehlt)"
+    try:
+        content = file_field.read().decode("utf-8")
+        return mark_safe(markdown.markdown(content))
+    except Exception as e:
+        return f"(Markdown konnte nicht angezeigt werden: {e})"
