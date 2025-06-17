@@ -99,41 +99,105 @@
     </div>
   </div>
 
-  {% if form.instance.pk and form.instance.content_object %}
-    <div class="card bg-light border-secondary mb-4">
-      <div class="card-body">
-        <h3 class="h5 text-primary mb-3">Verknüpftes Objekt</h3>
-        {% with obj=form.instance.content_object model=form.instance.object_type_string %}
-          {% if model == "pdf_document" %}
-            <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">PDF öffnen</a></p>
-            <iframe src="{{ obj.file.url }}" width="100%" height="400px" class="border"></iframe>
-          {% elif model == "img_document" %}
-            <p><strong>Bild:</strong></p>
-            <img src="{{ obj.file.url }}" alt="Bild" class="img-fluid border mb-3">
-          {% elif model == "markdown_document" %}
-            <p><strong>Markdown-Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
-            <div class="border rounded p-3 bg-white">
-              {{ obj.file|render_markdown }}
+{% if form.instance.pk and form.instance.content_object %}
+  <div class="card bg-light border-secondary mb-4">
+    <div class="card-body">
+      <h3 class="h5 text-primary mb-3">Verknüpftes Objekt</h3>
+      {% with obj=form.instance.content_object model=form.instance.object_type_string %}
+        {% if model == "pdf_document" %}
+          <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">PDF öffnen</a></p>
+          <iframe src="{{ obj.file.url }}" width="100%" height="400px" class="border"></iframe>
+
+
+        {% elif model == "img_document" %}
+          <p><strong>Bild:</strong></p>
+          <img src="{{ obj.file.url }}" alt="Bild" class="img-fluid border mb-3">
+
+
+        {% elif model == "markdown_document" %}
+          <p><strong>Markdown-Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
+          <div class="border rounded p-3 bg-white">
+            {{ obj.file|render_markdown }}
+          </div>
+          <a href="{% url 'markdown_detail' obj.pk %}" class="btn btn-outline-primary mt-2">Zur Detailansicht</a>
+
+        {% elif model in "text_document csv_document" %}
+          <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
+          <pre class="bg-dark p-3 border rounded text-wrap">{{ obj.file.read|default:"(Inhalt kann nicht angezeigt werden)" }}</pre>
+
+
+        {% elif model == "audio_document" %}
+          <p><strong>Audio:</strong></p>
+          <audio controls src="{{ obj.file.url }}" class="w-100">Dein Browser unterstützt kein Audio.</audio>
+
+
+
+        {% elif model == "goal" %}
+          <p><strong>Ziel:</strong> <a href="{% url 'goal_detail' obj.pk %}">{{ obj.title }}</a></p>
+
+          <div class="mb-3">
+            <h4 class="h6 text-secondary">Beschreibung</h4>
+            <p>{{ obj.description|default:"(Keine Beschreibung)" }}</p>
+          </div>
+
+          <div class="mb-3">
+            <h4 class="h6 text-secondary">Status</h4>
+            <p>{{ obj.status|title }}</p>
+          </div>
+
+          <div class="mb-3">
+            <h4 class="h6 text-secondary">Erstellt am</h4>
+            <p>{{ obj.created_at|date:"d.m.Y H:i" }}</p>
+          </div>
+
+          <div class="mb-3">
+            <h4 class="h6 text-secondary">Letzte Änderung</h4>
+            <p>{{ obj.updated_at|date:"d.m.Y H:i" }}</p>
+          </div>
+
+          {% if obj.attributes.exists %}
+            <div class="mb-3">
+              <h4 class="h6 text-secondary">Attribute</h4>
+              <ul>
+                {% for attr in obj.attributes.all %}
+                  <li>{{ attr.name }}: {{ attr.value }}</li>
+                {% endfor %}
+              </ul>
             </div>
-
-          {% elif model in "text_document csv_document" %}
-            <p><strong>Datei:</strong> <a href="{{ obj.file.url }}" target="_blank">Herunterladen</a></p>
-            <pre class="bg-dark p-3 border rounded text-wrap">{{ obj.file.read|default:"(Inhalt kann nicht angezeigt werden)" }}</pre>
-
-          {% elif model == "audio_document" %}
-            <p><strong>Audio:</strong></p>
-            <audio controls src="{{ obj.file.url }}" class="w-100">Dein Browser unterstützt kein Audio.</audio>
-          {% elif model == "message" %}
-            <p><strong>Nachricht:</strong></p>
-            <div class="border p-3 bg-dark rounded text-wrap">{{ obj.text|linebreaks }}</div>
-          {% else %}
-            <p><em>Typ: "{{ model }}"</em></p>
-            <pre class="bg-dark p-3 border rounded text-wrap">{{ obj }}</pre>
           {% endif %}
-        {% endwith %}
-      </div>
+
+          {% if obj.advices.exists %}
+            <div class="mb-3">
+              <h4 class="h6 text-secondary">Empfehlungen</h4>
+              <ul>
+                {% for advice in obj.advices.all %}
+                  <li>{{ advice.text }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if obj.status_updates.exists %}
+            <div class="mb-3">
+              <h4 class="h6 text-secondary">Statusänderungen</h4>
+              <ul>
+                {% for update in obj.status_updates.all %}
+                  <li>{{ update.timestamp|date:"d.m.Y H:i" }}: {{ update.status }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <a href="{% url 'goal_detail' obj.pk %}" class="btn btn-outline-primary">Zur Ziel-Detailansicht</a>
+
+        {% else %}
+          <p><em>Typ: "{{ model }}"</em></p>
+          <pre class="bg-dark p-3 border rounded text-wrap">{{ obj }}</pre>
+        {% endif %}
+      {% endwith %}
     </div>
-  {% endif %}
+  </div>
+{% endif %}
 
   {% if related_infos %}
     <div class="card bg-light border-secondary mb-4">

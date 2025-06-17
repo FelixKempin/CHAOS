@@ -37,6 +37,11 @@ from chaos_documents.models import (
     MARKDOWN_Document, IMG_Document
 )
 
+from chaos_mentor.models import GoalStatusUpdate, Advice
+
+from chaos_mentor.models import Goal
+
+
 @require_GET
 def search_neighbors(request):
     q = request.GET.get("q", "").strip()
@@ -268,7 +273,25 @@ class InformationUpdateView(UpdateView):
         ctx['selected_folder_pk'] = self.object.folder_id
         ctx['selected_tags']      = self.object.tags.all()
         ctx['related_infos']      = self.get_related_infos()
+
+        # Falls verknüpftes Objekt ein Ziel ist
+        obj = self.object.content_object
+        if isinstance(obj, Goal):
+            ctx["linked_goal"] = obj
+
+            advices = Advice.objects.filter(goal=obj).order_by('-date')
+            updates = GoalStatusUpdate.objects.filter(goal=obj).order_by('-date')
+
+            timeline = sorted(
+                [{"type": "advice", "entry": a} for a in advices] +
+                [{"type": "status_update", "entry": u} for u in updates],
+                key=lambda x: x["entry"].date,
+                reverse=True
+            )
+            ctx["goal_timeline"] = timeline
+
         return ctx
+
 
 class InformationDeleteView(DeleteView):
     model = Information

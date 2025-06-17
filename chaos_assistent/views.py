@@ -43,18 +43,18 @@ def fetch_contextual_information(thread, newest_message_text, top_k=5):
 
 class ThreadListView(ListView):
     model = Thread
-    template_name = 'main_app/thread_list.html'
+    template_name = 'thread_list.html'
     context_object_name = 'threads'
     paginate_by = 20
 
 class ThreadCreateView(CreateView):
     model = Thread
     form_class = ThreadForm
-    template_name = 'main_app/thread_form.html'
+    template_name = 'thread_form.html'
     success_url = reverse_lazy('thread_list')
 
 class ThreadDetailView(View):
-    template_name = 'main_app/thread_detail.html'
+    template_name = 'thread_detail.html'
 
     def get(self, request, pk):
         thread = get_object_or_404(Thread, pk=pk)

@@ -35,3 +35,4 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"[{self.get_sender_display()}] {self.content[:50]}"
+

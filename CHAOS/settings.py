@@ -94,7 +94,10 @@ INSTALLED_APPS = [
     'chaos_information',
     'chaos_organizer',
     'chaos_assistent',
-    'chaos_routine'
+    'chaos_routine',
+    'chaos_journal',
+    'chaos_mentor',
+    'chaos_finance'
 
 ]
 

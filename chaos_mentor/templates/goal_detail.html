@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ goal.name }}</h2>
+    <p><strong>Typ:</strong> {{ goal.get_type_display }}</p>
+    <p><strong>Beschreibung:</strong> {{ goal.definition_description }}</p>
+    <p><strong>Bedingungen:</strong> {{ goal.definition_conditions }}</p>
+
+    <hr>
+    <h4>Verlauf</h4>
+    <ul class="list-group mb-4">
+        {% for item in timeline %}
+    <li class="list-group-item">
+        <div class="d-flex justify-content-between">
+            <div>
+                {% if item.type == "advice" %}
+                    <strong>💡 {{ item.entry.title }}</strong><br>
+                    {{ item.entry.content|linebreaks }}
+                {% else %}
+                    <strong>📄 {{ item.entry.created_at|date:"d.m.Y H:i" }}</strong><br>
+                    {{ item.entry.content|linebreaks }}
+                {% endif %}
+            </div>
+            <div>
+                {% if item.type == "advice" %}
+                    <form method="post" action="{% url 'delete_advice' item.entry.pk %}">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger">Entfernen</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'delete_status_update' item.entry.pk %}">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger">Entfernen</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </li>
+{% empty %}
+    <li class="list-group-item">Noch keine Einträge vorhanden.</li>
+{% endfor %}
+
+    </ul>
+
+    <h4>Neue Statusmeldung</h4>
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        {{ status_form.as_p }}
+        <button type="submit" class="btn btn-success">Speichern</button>
+    </form>
+
+    <div class="mt-4">
+        <a href="{% url 'goal_update' goal.pk %}" class="btn btn-warning">Bearbeiten</a>
+        <a href="{% url 'goal_delete' goal.pk %}" class="btn btn-danger">Löschen</a>
+    </div>
+</div>
+{% endblock %}

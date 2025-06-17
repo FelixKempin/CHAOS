@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{% if form.instance.pk %}Ziel bearbeiten{% else %}Ziel erstellen{% endif %}</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-primary">Speichern</button>
+</form>
+<a href="{% url 'goal_list' %}" class="btn btn-secondary mt-2">Abbrechen</a>
+{% endblock %}

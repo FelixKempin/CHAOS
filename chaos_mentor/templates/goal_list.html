@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Ziele</h2>
+    <a href="{% url 'goal_create' %}" class="btn btn-primary mb-3">Neues Ziel</a>
+    <ul class="list-group">
+        {% for goal in goals %}
+            <li class="list-group-item">
+                <a href="{% url 'goal_detail' goal.pk %}">{{ goal.name }}</a>
+            </li>
+        {% empty %}
+            <li class="list-group-item">Keine Ziele vorhanden.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

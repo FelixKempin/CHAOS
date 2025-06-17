@@ -113,7 +113,36 @@
       {% for info in infos %}
         <tr>
           <td>{{ info.datetime|date:"Y-m-d H:i" }}</td>
-          <td class="info-title">{{ info.title }}</td>
+          <td class="info-title" style="color: orange !important;">
+  {% if info.object_type_string == "pdf_document" %}
+    📄
+  {% elif info.object_type_string == "img_document" %}
+    🖼️
+  {% elif info.object_type_string == "markdown_document" %}
+    📝
+  {% elif info.object_type_string == "audio_document" %}
+    🎵
+  {% elif info.object_type_string == "csv_document" %}
+    📊
+  {% elif info.object_type_string == "text_document" %}
+    📝
+  {% elif info.object_type_string == "message" %}
+    💬
+  {% elif info.object_type_string == "todo" %}
+    ✅
+  {% elif info.object_type_string == "appointment" %}
+    📅
+  {% elif info.object_type_string == "contact" %}
+    👤
+  {% else %}
+    📁
+  {% endif %}
+
+  {{ info.title }}
+</td>
+
+<td style="color: purple;">{{ info.datetime|date:"Y-m-d H:i" }}</td>
+
           <td>
             {% if info.folder %}
               {{ info.folder.get_full_path }}
