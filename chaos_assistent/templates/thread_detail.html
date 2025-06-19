@@ -1,6 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>{{ thread.title }}</h1>
+
+<!-- Kontextanzeige -->
+<div class="card mb-3 border-primary">
+  <div class="card-header bg-primary text-white">
+    Aktueller Kontext ({{ context_entries|length }})
+  </div>
+  <div class="card-body">
+    {% if context_entries %}
+      <ul class="list-group">
+        {% for ctx in context_entries %}
+          <li class="list-group-item d-flex justify-content-between align-items-start">
+            <div class="ms-2 me-auto">
+              <div class="fw-bold">{{ ctx.information.title }}</div>
+              <small class="text-muted">Typ: {{ ctx.get_used_field_display }}</small>
+              <p class="mt-2">{{ ctx.used_text|truncatechars:200 }}</p>
+            </div>
+            <div class="btn-group">
+              {% if ctx.information.get_absolute_url %}
+                <a href="{{ ctx.information.get_absolute_url }}" target="_blank" class="btn btn-outline-secondary btn-sm">Ansehen</a>
+              {% endif %}
+              <form action="{% url 'remove_context_entry' ctx.pk %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm">Entfernen</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">Noch keine Kontextinformationen geladen.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Nachrichtenliste -->
 <div class="card mb-3">
   <div class="card-body" style="height:400px; overflow-y:auto;">
     {% for msg in messages %}
@@ -15,9 +50,12 @@
     {% endfor %}
   </div>
 </div>
+
+<!-- Neue Nachricht -->
 <form method="post">{% csrf_token %}
   {{ form }}
   <button type="submit" class="btn btn-primary">Senden</button>
 </form>
+
 <a href="{% url 'thread_list' %}" class="btn btn-link mt-3">← Zur Thread-Liste</a>
 {% endblock %}

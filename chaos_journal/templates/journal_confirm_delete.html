@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Journal löschen</h1>
+  <p>Bist du sicher, dass du dieses Journal vom {{ object.date }} löschen möchtest?</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Ja, löschen</button>
+    <a href="{% url 'journal_detail' object.pk %}" class="btn btn-secondary">Abbrechen</a>
+  </form>
+{% endblock %}

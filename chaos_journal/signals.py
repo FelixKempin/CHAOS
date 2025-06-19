@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # --- Informationen erzeugen ---
 
 @receiver(post_save, sender=DailyJournal)
-def handle_goal_save(sender, instance: DailyJournal, created, **kwargs):
+def handle_daily_journal_save(sender, instance: DailyJournal, created, **kwargs):
     if created:
         transaction.on_commit(
             lambda: task_create_info_for_journal.delay(str(instance.pk))

@@ -1,22 +1,22 @@
 import logging
-from urllib.parse import unquote
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models.signals import post_save, pre_save, pre_delete, post_delete
-from django.dispatch import receiver
-
-
 from .models import IMG_Document, PDF_Document, TEXT_Document, EmbeddedAsset
-from .services.storage_backends import DocumentMediaStorage
 from .tasks import (
     task_create_info_for_img,
     task_create_info_for_pdf,
-    task_create_info_for_text, task_create_info_for_markdown,
+    task_create_info_for_text,
+    task_create_info_for_markdown,
 )
 import re
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from .models import MARKDOWN_Document
+from chaos_embeddings.services.embedding_service import update_embedding_for_information
+from chaos_information.models import Information
+
 logger = logging.getLogger(__name__)
 
 DOCUMENT_MODELS = [
@@ -96,14 +96,35 @@ def handle_text_doc_save(sender, instance: TEXT_Document, created, **kwargs):
         )
         logger.debug(f"[signals] task_create_info_for_text scheduled für TEXT_Document {instance.pk}")
 
-# --- Signal: nach Anlegen eines Markdown-Dokuments den Info-Task anstoßen ---
+
 @receiver(post_save, sender=MARKDOWN_Document)
-def handle_markdown_doc_save(sender, instance: MARKDOWN_Document, created, **kwargs):
-    if created and instance.file:
+def handle_markdown_doc_save(sender, instance, created, **kwargs):
+    ## DIE Originalinformation muss bei dieser gelegenheit noch jedes mal aus dem md gezogen werden -> keine AI nötig
+
+    if not instance.file:
+        return
+
+    ct = ContentType.objects.get_for_model(instance)
+
+    try:
+        info = Information.objects.get(content_type=ct, object_id=str(instance.pk))
+    except Information.DoesNotExist:
+        info = None
+
+    if created or info is None:
+        # Erstelle komplett via Task
         transaction.on_commit(
             lambda: task_create_info_for_markdown.delay(str(instance.pk))
         )
-        logger.debug(f"[signals] task_create_info_for_markdown scheduled für MARKDOWN_Document {instance.pk}")
+        logger.debug(f"[signals] task_create_info_for_markdown scheduled (create) für {instance.pk}")
+    else:
+        # Update: nur Embedding updaten
+        def update_embeddings():
+            # Nutze die Logik für Embedding-Update mit dem vorhandenen Information-Objekt
+            update_embedding_for_information(info)
+
+        transaction.on_commit(update_embeddings)
+        logger.debug(f"[signals] Embedding-Update für MARKDOWN_Document {instance.pk} durchgeführt")
 
 @receiver(post_delete, sender=MARKDOWN_Document)
 def cleanup_on_delete(sender, instance, **kwargs):

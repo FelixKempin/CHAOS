@@ -1,4 +1,3 @@
-# main_app/forms.py
 from django import forms
 from .models import Thread, ChatMessage
 
@@ -7,7 +6,10 @@ class ThreadForm(forms.ModelForm):
         model = Thread
         fields = ['title']
         widgets = {
-            'title': forms.TextInput(attrs={'placeholder': 'Titel des neuen Threads'}),
+            'title': forms.TextInput(attrs={
+                'placeholder': 'Titel des neuen Threads',
+                'class': 'form-control'
+            }),
         }
 
 class ChatMessageForm(forms.ModelForm):
@@ -17,7 +19,8 @@ class ChatMessageForm(forms.ModelForm):
         widgets = {
             'content': forms.Textarea(attrs={
                 'rows': 3,
-                'placeholder': 'Schreibe deine Nachricht…'
+                'placeholder': 'Schreibe deine Nachricht…',
+                'class': 'form-control'
             }),
         }
         labels = {

@@ -44,3 +44,32 @@ def save_embedding_for_object(obj, text: str, model: str = None) -> Embedding:
         f"{ct.app_label}.{ct.model} pk={obj.pk}"
     )
     return emb
+
+
+def update_embedding_for_information(info: Information):
+    try:
+        # Text zusammensetzen für Embedding (z.B. Title + Kontext + Kurz + Lang)
+        emb_input = "\n".join([
+            info.title or "",
+            info.context or "",
+            info.information_short or "",
+            info.information_long or "",
+        ]).strip()
+
+        if not emb_input:
+            logger.warning(f"Embedding: Kein Text zum Einbetten für Information {info.pk}")
+            return
+
+        vector = generate_embedding(emb_input)
+
+        ct_info = ContentType.objects.get_for_model(Information)
+        Embedding.objects.update_or_create(
+            content_type=ct_info,
+            object_id=str(info.pk),
+            defaults={'vector': vector}
+        )
+
+        logger.info(f"Embedding für Information {info.pk} aktualisiert")
+
+    except Exception as e:
+        logger.error(f"Fehler beim Embedding-Update für Information {info.pk}: {e}", exc_info=True)

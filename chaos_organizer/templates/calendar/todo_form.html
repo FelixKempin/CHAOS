@@ -1,6 +1,8 @@
 {# templates/calendar/todo_form.html #}
 {% extends "base.html" %}
+{% load widget_tweaks %}
 {% block content %}
+
 <div class="container mt-4">
   <h2 class="text-light">
     {% if object %}To-Do bearbeiten{% else %}Neues To-Do anlegen{% endif %}

@@ -7,10 +7,8 @@ def create_information_for_journal(journal):
     logger.debug(f"[create_info_goal] Starte Verarbeitung für Ziel {journal.pk}")
 
     text_parts = []
-    if journal.name is not None:
-        text_parts.append(f"{journal.name} \n")
     if journal.date:
-        logger.debug(f"[create_info_goal] date gefunden ({len(journal.definition_description)} Zeichen), füge hinzu")
+        logger.debug(f"[create_info_goal] date gefunden), füge hinzu")
         text_parts.append(f"Datum: {journal.date} \n")
     if journal.daily_summary:
         text_parts.append(f"{journal.daily_summary} \n")
@@ -20,7 +18,6 @@ def create_information_for_journal(journal):
         text_parts.append(f"{journal.negative_things} \n")
     if journal.daily_thoughts:
         text_parts.append(f"{journal.daily_thoughts} \n")
-
 
     full_text = "\n\n".join(text_parts).strip()
     if not full_text:

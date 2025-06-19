@@ -75,7 +75,6 @@ def openai_parse_information_fields(text: str) -> dict:
             "relevance": 25
         }
 
-
 def create_information(obj, meta_text: str, text: str = None) -> Information:
     """
     Extrahiere strukturierte Felder, speichere Information und Embedding.
@@ -145,7 +144,6 @@ def create_information(obj, meta_text: str, text: str = None) -> Information:
 
     logger.info(f"Information {'erstellt' if created else 'aktualisiert'} (ID={info.pk})")
     return info
-
 
 def create_information_for_required_information(req_info):
     """

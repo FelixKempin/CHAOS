@@ -26,4 +26,5 @@ urlpatterns = [
     path('organizer/' , include('chaos_organizer.urls')),
     path('documents/', include('chaos_documents.urls')),
     path('mentor/', include('chaos_mentor.urls')),
+    path('journal/', include('chaos_journal.urls')),
 ]

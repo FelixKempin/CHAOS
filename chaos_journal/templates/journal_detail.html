@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card bg-dark text-light shadow-lg">
+    <div class="card-header">
+      <h2 class="mb-0">🗒️ Journal vom {{ daily_journal.date|date:"d.m.Y H:i" }}</h2>
+    </div>
+    <div class="card-body">
+      <p><strong>📌 Meta-Beschreibung:</strong><br> {{ daily_journal.meta_description|default:"(Keine Beschreibung)" }}</p>
+      <hr class="bg-secondary">
+      <p><strong>📝 Tägliche Zusammenfassung:</strong><br> {{ daily_journal.daily_summary }}</p>
+      <p><strong>🌞 Positive Dinge:</strong><br> {{ daily_journal.positive_things }}</p>
+      <p><strong>🌧️ Negative Dinge:</strong><br> {{ daily_journal.negative_things }}</p>
+      <p><strong>💭 Tägliche Gedanken:</strong><br> {{ daily_journal.daily_thoughts }}</p>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <div>
+        <a href="{% url 'journal_update' daily_journal.pk %}" class="btn btn-warning me-2">✏️ Bearbeiten</a>
+        <a href="{% url 'journal_delete' daily_journal.pk %}" class="btn btn-danger">🗑️ Löschen</a>
+      </div>
+      <a href="{% url 'journal_list' %}" class="btn btn-secondary">🔙 Zurück</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
